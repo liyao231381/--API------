@@ -4,9 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>抖音视频信息获取</title>
-    <link rel="icon" href="https://www.douyin.com/favicon.ico"> <!-- Using Douyin favicon for consistency -->
+    <link rel="icon" href="icon.svg">
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- FancyBox v4 CSS CDN -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fancyapps/ui@4.0/dist/fancybox.css" />
     <style>
         /* Custom scrollbar */
         ::-webkit-scrollbar {
@@ -34,6 +36,14 @@
         .fade-in {
             animation: fadeIn 0.3s ease-out forwards;
         }
+        .fade-out {
+            animation: fadeOut 0.3s ease-in forwards;
+        }
+         @keyframes fadeOut {
+            from { opacity: 1; transform: translateY(0); }
+            to { opacity: 0; transform: translateY(10px); }
+        }
+
 
         /* Custom select arrow */
         .custom-select {
@@ -41,17 +51,18 @@
             background-repeat: no-repeat;
             background-position: right 0.75rem center;
             background-size: 16px 12px;
-            -webkit-appearance: none; /* Remove default arrow */
-            -moz-appearance: none;
-            appearance: none;
         }
 
+        /* Image hover effect */
+        .image-container:hover img {
+            transform: scale(1.03);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        }
 
         /* Button loading state */
         .button-loading {
             position: relative;
-            pointer-events: none; /* Disable interaction */
-            color: transparent !important; /* Hide button text */
+            pointer-events: none;
         }
         .button-loading::after {
             content: "";
@@ -74,22 +85,14 @@
         }
 
         /* Video player styling */
-        .video-player-container {
-            position: relative;
-            padding-bottom: 56.25%; /* 16:9 Aspect Ratio */
-            height: 0;
-            overflow: hidden;
-            max-width: 100%;
-            background: black;
+        #video-player {
+            display: block;
+            margin: 0 auto;
             border-radius: 0.5rem;
             box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-        }
-        #video-player {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
+            max-width: 100%;
+            height: auto;
+            max-height: calc(100vh - 100px); /* Limit height for better layout */
         }
 
         /* Smooth transitions */
@@ -120,42 +123,32 @@
             display: inline-block;
         }
 
-        /* Image hover effect for grid */
-        .image-container:hover img {
-            transform: scale(1.03);
-            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        /* Line clamping for history card title */
+        .line-clamp-2 {
+            display: -webkit-box;
+            -webkit-box-orient: vertical;
+            -webkit-line-clamp: 2;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
-        .image-container img { /* Ensure smooth transition for scaling */
-            transition: transform 0.3s ease-in-out, box-shadow 0.3s ease-in-out;
-        }
-
-        /* History list item hover for trash icon */
-        #history-list .group:hover .fa-trash-alt {
-            opacity: 1;
-        }
-        #history-list .fa-trash-alt {
-            opacity: 0;
-            transition: opacity 0.2s ease-in-out;
-        }
-        
     </style>
 </head>
 <body class="bg-gray-50 min-h-screen">
-    <div class="container max-w-full h-screen mx-auto p-4 lg:p-0">
+    <div class="container max-w-full h-screen">
         <!-- Main layout container -->
-        <div class="flex flex-col lg:flex-row shadow-lg rounded-xl overflow-hidden bg-white">
+        <div class="flex flex-col lg:flex-row">
 
             <!-- Left column (Parameters and History) -->
-            <div class="flex flex-col w-full lg:w-1/4 lg:h-screen lg:overflow-y-auto border-r border-gray-100">
+            <div class="flex flex-col w-full lg:w-1/4 lg:h-screen">
                 <!-- Input panel -->
-                <div class="p-6 border-b border-gray-100">
+                <div class="bg-white p-6 border-b">
                     <h2 class="text-xl font-semibold text-gray-800 mb-4 flex items-center">
                         <i class="fas fa-cog text-orange-500 mr-2"></i> 参数设置
                     </h2>
 
                     <div class="space-y-4">
                         <div>
-                            <label for="api-route" class="block text-sm font-medium text-gray-700 mb-1 flex items-center">
+                            <label class="block text-sm font-medium text-gray-700 mb-1 flex items-center">
                                 <i class="fas fa-route text-blue-500 mr-2 text-xs"></i> API线路
                             </label>
                             <select id="api-route" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 custom-select">
@@ -167,7 +160,7 @@
                         </div>
 
                         <div>
-                            <label for="id" class="block text-sm font-medium text-gray-700 mb-1 flex items-center">
+                            <label class="block text-sm font-medium text-gray-700 mb-1 flex items-center">
                                 <i class="fas fa-id-card text-purple-500 mr-2 text-xs"></i> ID
                             </label>
                             <input type="text" id="id" placeholder="请输入您的ID"
@@ -175,7 +168,7 @@
                         </div>
 
                         <div>
-                            <label for="key" class="block text-sm font-medium text-gray-700 mb-1 flex items-center">
+                            <label class="block text-sm font-medium text-gray-700 mb-1 flex items-center">
                                 <i class="fas fa-key text-yellow-500 mr-2 text-xs"></i> Key
                             </label>
                             <input type="text" id="key" placeholder="请输入您的Key"
@@ -183,19 +176,19 @@
                         </div>
 
                         <div>
-                            <label for="douyin-url" class="block text-sm font-medium text-gray-700 mb-1 flex items-center">
+                            <label class="block text-sm font-medium text-gray-700 mb-1 flex items-center">
                                 <i class="fab fa-tiktok text-pink-500 mr-2 text-xs"></i> 抖音视频链接
                             </label>
-                            <input type="text" id="douyin-url" placeholder="请输入抖音分享文本或链接"
+                            <input type="text" id="douyin-url" placeholder="请输入抖音视频链接"
                                 class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 mb-2">
 
-                            <div class="flex justify-between gap-2">
+                            <div class="flex justify-between">
                                 <button onclick="pasteUrl()"
-                                    class="flex-1 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg flex items-center justify-center transition-all text-sm">
+                                    class="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg flex items-center transition-all">
                                     <i class="fas fa-paste mr-2"></i> 粘贴链接
                                 </button>
                                 <button id="fetch-btn" onclick="fetchData()"
-                                    class="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg flex items-center justify-center transition-all text-sm">
+                                    class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg flex items-center transition-all">
                                     <i class="fas fa-cloud-download-alt mr-2"></i> 获取信息
                                 </button>
                             </div>
@@ -204,11 +197,11 @@
                 </div>
 
                 <!-- History panel -->
-                <div id="history-panel" class="p-6 lg:flex-1 overflow-y-auto">
+                <div id="history-container" class="bg-white p-6 lg:h-1/2 overflow-y-auto">
                     <h2 class="text-xl font-semibold text-gray-800 mb-4 flex items-center">
                         <i class="fas fa-history text-green-500 mr-2"></i> 历史记录
                     </h2>
-                    <ul id="history-list" class="divide-y divide-gray-200">
+                    <ul id="history-list" class="flex flex-wrap divide-gray-200">
                         <li class="py-3 text-center text-gray-400">
                             <i class="fas fa-clock mr-2"></i>暂无历史记录
                         </li>
@@ -217,39 +210,40 @@
             </div>
 
             <!-- Content panel -->
-            <div id="content-container" class="p-6 flex-grow w-full lg:w-1/2 lg:h-screen overflow-y-auto border-r border-gray-100 flex flex-col items-center justify-center">
-                <div class="flex flex-col items-center justify-center text-gray-400">
+            <div id="content-container" class="bg-white p-6 border flex-grow w-full lg:w-1/2 lg:h-screen overflow-y-auto">
+                <div class="flex flex-col items-center justify-center min-h-[200px] text-gray-400">
                     <i class="fas fa-photo-video text-4xl mb-2"></i>
-                    <p>视频或图片预览将显示在这里</p>
+                    <p>视频或图片内容将显示在这里</p>
                 </div>
             </div>
 
             <!-- Info panel -->
-            <div id="info-container" class="p-6 flex-grow w-full lg:w-1/4 lg:h-screen overflow-y-auto flex flex-col items-center justify-center">
-                <div class="flex flex-col items-center justify-center text-gray-400">
+            <div id="info-container" class="bg-white p-6 flex-grow w-full lg:w-1/4 lg:h-screen overflow-y-auto">
+                <div class="flex flex-col items-center justify-center min-h-[200px] text-gray-400">
                     <i class="fas fa-info-circle text-4xl mb-2"></i>
-                    <p>请输入抖音链接并点击"获取信息"</p>
+                    <p>请输入抖音链接并点击"获取信息"开始</p>
                 </div>
             </div>
         </div>
     </div>
 
+    <!-- FancyBox v4 JS CDN - 放在 body 结束标签前 -->
+    <script src="https://cdn.jsdelivr.net/npm/@fancyapps/ui@4.0/dist/fancybox.umd.js"></script>
     <script>
-        // DOM 元素引用
-        const idInput = document.getElementById("id");
-        const keyInput = document.getElementById("key");
-        const douyinUrlInput = document.getElementById("douyin-url");
-        const apiRouteSelect = document.getElementById("api-route");
-        const fetchBtn = document.getElementById("fetch-btn");
-        const contentContainer = document.getElementById("content-container");
-        const infoContainer = document.getElementById("info-container");
-        const historyList = document.getElementById("history-list");
-
-        // 预设的 API ID 和 Key
+        // 预设的 ID 和 Key
         const defaultId = "10003120";
         const defaultKey = "bfb75036b210ed35bee6e002d623293c";
 
-        // API 线路列表
+        // 从 localStorage 加载 ID 和 Key，如果 localStorage 中没有，则使用预设值
+        const idInput = document.getElementById("id");
+        const keyInput = document.getElementById("key");
+        const douyinUrlInput = document.getElementById("douyin-url"); // 获取链接输入框
+        const fetchBtn = document.getElementById("fetch-btn");
+
+        idInput.value = localStorage.getItem("id") || defaultId;
+        keyInput.value = localStorage.getItem("key") || defaultKey;
+
+        //API 线路
         const apiRoutes = [
             "https://cn.apihz.cn/api/fun/douyin.php",
             "http://101.35.2.25/api/fun/douyin.php",
@@ -257,113 +251,356 @@
             "http://124.220.49.230/api/fun/douyin.php"
         ];
 
-        // 本地存储键名
-        const LOCAL_STORAGE_HISTORY_KEY = "douyinHistory";
-        const LOCAL_STORAGE_ID_KEY = "douyinApiId";
-        const LOCAL_STORAGE_KEY_KEY = "douyinApiKey";
-        const LOCAL_STORAGE_ROUTE_KEY = "douyinApiRoute";
+        // 从 localStorage 加载 API 线路
+        const storedRoute = localStorage.getItem("apiRoute") || "0"; // 默认线路
+        document.getElementById("api-route").value = storedRoute;
 
-        let history = []; // 历史记录数组
+        let history = JSON.parse(localStorage.getItem("douyinHistory") || "[]");
+        displayHistory();
 
-        // --- 初始化加载 ---
-        document.addEventListener("DOMContentLoaded", () => {
-            loadApiKeys();
-            loadApiRoute();
-            loadHistory();
-            displayHistory();
-        });
-
-        /**
-         * 加载本地缓存的 API 密钥和线路
-         */
-        function loadApiKeys() {
-            idInput.value = localStorage.getItem(LOCAL_STORAGE_ID_KEY) || defaultId;
-            keyInput.value = localStorage.getItem(LOCAL_STORAGE_KEY_KEY) || defaultKey;
+        function getCurrentApiUrl() {
+            const routeIndex = parseInt(document.getElementById("api-route").value);
+            return apiRoutes[routeIndex] || apiRoutes[0]; // 默认使用第一个线路
         }
 
-        function loadApiRoute() {
-            apiRouteSelect.value = localStorage.getItem(LOCAL_STORAGE_ROUTE_KEY) || "0";
-        }
+        function fetchData() {
+            const id = idInput.value;
+            const key = keyInput.value;
+            let douyinUrl = douyinUrlInput.value; // 使用已定义的变量
+            const selectedRoute = document.getElementById("api-route").value;
 
-        /**
-         * 保存 API 密钥和线路到本地缓存
-         */
-        function saveApiKeys() {
-            localStorage.setItem(LOCAL_STORAGE_ID_KEY, idInput.value.trim());
-            localStorage.setItem(LOCAL_STORAGE_KEY_KEY, keyInput.value.trim());
-            localStorage.setItem(LOCAL_STORAGE_ROUTE_KEY, apiRouteSelect.value);
-        }
+            // 保存 API 线路 到 localStorage
+            localStorage.setItem("apiRoute", selectedRoute);
 
-        /**
-         * 加载历史记录
-         */
-        function loadHistory() {
-            try {
-                history = JSON.parse(localStorage.getItem(LOCAL_STORAGE_HISTORY_KEY) || "[]");
-            } catch (e) {
-                console.error("解析历史记录失败", e);
-                history = [];
+            if (!id || !key) {
+                showAlert("请输入 ID 和 Key!", "error");
+                return;
             }
+
+            if (!douyinUrl) {
+                showAlert("请输入抖音视频链接!", "error");
+                return;
+            }
+
+            // 提取抖音链接 (这里假设 douyinUrl 可能包含其他文字，或是一个分享链接)
+            const match = douyinUrl.match(/(https:\/\/v\.douyin\.com\/[a-zA-Z0-9_-]+\/?)/);
+            let processedUrl = "";
+            if (match) {
+                processedUrl = match[0];
+            } else if (douyinUrl.startsWith("http")) {
+                processedUrl = douyinUrl;
+            } else {
+                showAlert("无法从输入中提取有效的抖音链接. 请确保链接中包含 'v.douyin.com' 或 'www.douyin.com' 且格式正确。", "error");
+                return;
+            }
+
+            // 保存 ID 和 Key 到 localStorage
+            localStorage.setItem("id", id);
+            localStorage.setItem("key", key);
+
+            // Show loading state
+            const originalButtonContent = fetchBtn.innerHTML;
+            fetchBtn.innerHTML = '';
+            fetchBtn.classList.add('button-loading');
+            fetchBtn.disabled = true;
+
+            tryFetchData(parseInt(selectedRoute), id, key, processedUrl, originalButtonContent, douyinUrl);
         }
 
-        /**
-         * 保存历史记录
-         */
-        function saveHistory() {
-            localStorage.setItem(LOCAL_STORAGE_HISTORY_KEY, JSON.stringify(history));
-        }
+        function tryFetchData(routeIndex, id, key, processedUrl, originalButtonContent, rawDouyinUrl) {
+            if (routeIndex >= apiRoutes.length) {
+                document.getElementById("info-container").innerHTML = `
+                    <div class="text-center py-8 text-red-500 fade-in">
+                        <i class="fas fa-exclamation-triangle text-3xl mb-2"></i>
+                        <p class="text-lg">所有线路请求失败，请稍后重试!</p>
+                    </div>
+                `;
+                document.getElementById("content-container").innerHTML = `
+                    <div class="flex flex-col items-center justify-center min-h-[200px] text-gray-400">
+                        <i class="fas fa-photo-video text-4xl mb-2"></i>
+                        <p>视频或图片内容将显示在这里</p>
+                    </div>
+                `;
 
-        /**
-         * 复制文本到剪贴板
-         * @param {string} text 要复制的文本
-         */
-        function copyToClipboard(text) {
-            navigator.clipboard.writeText(text)
-                .then(() => {
-                    showAlert("已复制到剪贴板！", "success");
+                fetchBtn.innerHTML = originalButtonContent;
+                fetchBtn.classList.remove('button-loading');
+                fetchBtn.disabled = false;
+
+                showAlert("所有线路请求失败，请检查网络或稍后重试！", "error");
+                return;
+            }
+
+            const apiUrl = `${apiRoutes[routeIndex]}?id=${id}&key=${key}&url=${encodeURIComponent(processedUrl)}`;
+
+            fetch(apiUrl)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! Status: ${response.status} from route ${routeIndex + 1}`);
+                    }
+                    return response.json();
                 })
-                .catch(err => {
-                    console.error('复制失败: ', err);
-                    showAlert("复制失败，请手动复制！", "error");
+                .then(data => {
+                    if (data.code === 200) {
+                        addToHistory(rawDouyinUrl, data); // 存储原始 API 响应数据
+                        displayData(data); // 使用完整的 API 响应 data 来显示
+                        showAlert("信息获取成功！", "success");
+                    } else {
+                        console.warn(`Error from route ${routeIndex + 1}: ${data.msg || data.code}. Trying next route.`);
+                        tryFetchData(routeIndex + 1, id, key, processedUrl, originalButtonContent, rawDouyinUrl);
+                        return;
+                    }
+
+                    fetchBtn.innerHTML = originalButtonContent;
+                    fetchBtn.classList.remove('button-loading');
+                    fetchBtn.disabled = false;
+                })
+                .catch(error => {
+                    console.error(`Error fetching data from route ${routeIndex + 1}:`, error);
+                    console.log(`尝试切换到下一个线路: ${routeIndex + 2}`);
+                    tryFetchData(routeIndex + 1, id, key, processedUrl, originalButtonContent, rawDouyinUrl);
                 });
         }
 
-        /**
-         * 显示/隐藏标题的完整内容
-         */
-        function toggleTitleExpansion() {
-            const titleSpan = document.getElementById('video-title');
-            const expandButton = document.getElementById('expand-button');
+        function displayData(data) {
+            const infoContainer = document.getElementById("info-container");
+            const contentContainer = document.getElementById("content-container");
 
-            if (titleSpan && expandButton) {
-                if (titleSpan.classList.contains('expanded')) {
-                    titleSpan.classList.remove('expanded');
-                    expandButton.textContent = '展开';
-                } else {
-                    titleSpan.classList.add('expanded');
-                    expandButton.textContent = '收起';
+            // 添加 fade-out 动画类
+            infoContainer.classList.add('fade-out');
+            contentContainer.classList.add('fade-out');
+
+            // 等待动画结束后再更新内容
+            setTimeout(() => {
+                infoContainer.innerHTML = "";
+                contentContainer.innerHTML = "";
+                // 移除 fade-out 类，准备新的内容显示
+                infoContainer.classList.remove('fade-out');
+                contentContainer.classList.remove('fade-out');
+
+                // 移除 contentContainer 可能存在的 flex 布局类，以防影响非图集内容的显示
+                contentContainer.classList.remove('flex', 'flex-col');
+                contentContainer.classList.add('fade-in'); // 为新内容添加 fade-in
+
+                // --- 关键修改点：智能判断数据来源和有效性 ---
+                let isValidData = true; // 假设数据有效
+
+                // 优先处理 API 响应的错误情况 (只有当 data.code 存在时)
+                if (data.hasOwnProperty('code') && data.code !== 200) {
+                    infoContainer.innerHTML = `
+                        <div class="text-center py-8 text-red-500 fade-in">
+                            <i class="fas fa-exclamation-triangle text-3xl mb-2"></i>
+                            <p class="text-lg">API 错误: ${data.msg || data.code}</p>
+                            <p class="text-gray-500 text-sm mt-1">请检查链接或<button onclick="fetchData()" class="text-blue-600 hover:underline">重试</button></p>
+                        </div>
+                    `;
+                    return; // 发现 API 错误立即返回
                 }
-            }
+
+                // 接着检查历史数据或成功 API 数据的核心字段是否存在
+                if (!data.type || (!data.video && !data.images && !data.cover)) { // 至少需要类型和其中一种媒体链接/封面
+                    isValidData = false;
+                }
+                
+                // 如果数据被判断为无效，显示通用错误
+                if (!isValidData) {
+                     infoContainer.innerHTML = `
+                        <div class="text-center py-8 text-red-500 fade-in">
+                            <i class="fas fa-exclamation-triangle text-3xl mb-2"></i>
+                            <p class="text-lg">数据不完整或无效。</p>
+                            <p class="text-gray-500 text-sm mt-1">此内容可能已被删除或API返回数据结构异常。请<button onclick="fetchData()" class="text-blue-600 hover:underline">重新获取</button>或尝试其他链接。</p>
+                        </div>
+                    `;
+                    return; // 发现业务数据无效立即返回
+                }
+                // --- End 关键修改点 ---
+
+
+                // 以下是正常渲染逻辑，此时 data 已经被认为是有效数据
+                const infoDiv = document.createElement('div');
+                infoDiv.className = 'fade-in';
+
+                const coverUrl = data.cover || 'https://via.placeholder.com/300x500?text=No+Cover'; 
+
+                infoDiv.innerHTML = `
+                    <div class="flex flex-col gap-6">
+                        <div class="flex flex-row gap-4 items-start">
+                            <img src="${coverUrl}" alt="封面" class="w-1/2 rounded-lg shadow-md object-contain max-h-64">
+                            <div class="flex-1">
+                                <h3 class="text-xl font-semibold text-gray-800 mb-2 flex items-center">
+                                    <i class="fas fa-user-circle text-blue-500 mr-2"></i> ${data.name || '未知作者'}
+                                </h3>
+                                <p class="text-gray-700">
+                                    <i class="fas fa-heading text-purple-500 mr-2"></i> 标题:
+                                    <span id="video-title" class="title-clamp">${data.title || '无标题'}</span>
+                                    <span id="expand-button" class="expand-button" onclick="toggleTitleExpansion()">展开</span>
+                                </p>
+                            </div>
+                        </div>
+                        <div>
+                `;
+
+                if (data.type === "视频") {
+                    if (data.yvideo) { // Check if yvideo exists before attempting to play
+                        infoDiv.innerHTML += `
+                                <div class="mt-4 flex flex-wrap gap-3">
+                                    <button onclick="copyToClipboard('${data.yvideo}')"
+                                        class="px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg text-sm flex items-center transition-all">
+                                        <i class="fas fa-copy mr-2"></i> 复制视频链接
+                                    </button>
+                                    <button onclick="downloadResource('${data.video}', '${data.name || '未知作者'}_${data.title || '无标题'}.mp4')"
+                                        class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm inline-flex items-center justify-center transition-all">
+                                        <i class="fas fa-download"></i> 下载视频
+                                    </button>
+                                </div>
+                        `;
+
+                        contentContainer.innerHTML = `
+                            <div class="fade-in">
+                                <h3 class="text-lg font-semibold text-gray-800 mb-4 flex items-center">
+                                    <i class="fas fa-play-circle text-red-500 mr-2"></i> 视频预览
+                                </h3>
+                                <div class="video-player-container bg-black rounded-lg">
+                                    <video id="video-player" controls poster="${coverUrl}" src="${data.yvideo}" type="video/mp4" class="w-full">
+                                        您的浏览器不支持 HTML5 视频。
+                                    </video>
+                                </div>
+                            </div>
+                        `;
+                    } else { // Handle missing video link specifically for video type
+                        contentContainer.innerHTML = `
+                            <div class="fade-in text-center py-8 text-red-500">
+                                <i class="fas fa-exclamation-triangle text-3xl mb-2"></i>
+                                <p class="text-lg">视频链接丢失或无效。</p>
+                                <p class="text-gray-500 text-sm mt-1">此内容可能已被删除或API返回数据结构异常。请<button onclick="fetchData()" class="text-blue-600 hover:underline">重新获取</button>此内容。</p>
+                            </div>
+                        `;
+                    }
+                } else if (data.type === "图集") {
+                    if (data.images && data.images.length > 0) { // Check for images array and its content
+                        infoDiv.innerHTML += `
+                                <div class="mt-4 flex flex-wrap gap-3">
+                                    <button onclick="copyToClipboard('${data.images[0]}')"
+                                        class="px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg text-sm flex items-center transition-all">
+                                        <i class="fas fa-copy mr-2"></i> 复制首图链接
+                                    </button>
+                                </div>
+                        `;
+
+                        // --- START MODIFICATION FOR STICKY HEADER ---
+                        // contentContainer 应该有一个内部的 flex 布局，其中头部是固定高度，剩余空间给滚动内容
+                        contentContainer.classList.add('flex', 'flex-col'); // Add flex column to contentContainer
+                        contentContainer.style.paddingTop = '0'; // 移除默认的顶部 padding，因为 fixedHeaderDiv 会有自己的 padding
+                        contentContainer.style.paddingBottom = '0'; // 移除默认的底部 padding
+
+                        const fixedHeaderDiv = document.createElement('div');
+                        // 使用 bg-white 和 p-6 来保持与父容器的视觉一致性
+                        fixedHeaderDiv.className = 'fade-in bg-white p-6 pb-2 sticky top-0 z-10 border-b border-gray-200';
+
+                        fixedHeaderDiv.innerHTML = `
+                            <h3 class="text-lg font-semibold text-gray-800 mb-4 flex items-center">
+                                <i class="fas fa-images text-green-500 mr-2"></i> 图片预览 (${data.images.length}张)
+                            </h3>
+                        `;
+
+                        const downloadAllContainer = document.createElement("div");
+                        downloadAllContainer.className = "flex flex-col sm:flex-row items-center gap-3 mb-1 bg-gray-50 p-3 rounded-lg";
+
+                        const filenameInput = document.createElement("input");
+                        filenameInput.type = "text";
+                        filenameInput.id = "filename-input";
+                        filenameInput.placeholder = "输入文件名";
+                        filenameInput.className = "flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500";
+                        filenameInput.value = `${data.name || '抖音'}_${data.title || '图片'}`;
+                        downloadAllContainer.appendChild(filenameInput);
+
+                        const downloadAllButton = document.createElement("button");
+                        downloadAllButton.textContent = "一键下载所有图片";
+                        downloadAllButton.className = "px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg flex items-center transition-all whitespace-nowrap";
+                        downloadAllButton.innerHTML = '<i class="fas fa-download mr-2"></i> 一键下载所有图片';
+
+                        downloadAllButton.addEventListener('click', () => {
+                            const filename = document.getElementById("filename-input").value;
+                            downloadAllImages(data.images, filename);
+                        });
+                        downloadAllContainer.appendChild(downloadAllButton);
+                        fixedHeaderDiv.appendChild(downloadAllContainer); // Append to fixed header
+
+                        contentContainer.appendChild(fixedHeaderDiv); // Add fixed header to contentContainer
+
+                        const scrollableImageGridContainer = document.createElement('div');
+                        // flex-grow 占据剩余空间，overflow-y-auto 允许内部滚动
+                        // p-6 保持与 fixedHeaderDiv 相同的左右内边距，并提供顶部和底部内边距
+                        scrollableImageGridContainer.className = 'flex-grow overflow-y-auto p-6';
+
+                        const imageGrid = document.createElement("div");
+                        imageGrid.className = "grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4";
+
+                        imageGrid.addEventListener('click', function(event) {
+                           const downloadIcon = event.target.closest('.download-icon');
+                           if (downloadIcon) {
+                               event.preventDefault();
+                               const imageUrl = downloadIcon.dataset.url;
+                               const baseFilename = document.getElementById('filename-input').value || 'douyin_image';
+                               const index = downloadIcon.dataset.index;
+                               const filename = `${baseFilename}_${parseInt(index) + 1}.jpg`;
+                               downloadResource(imageUrl, filename);
+                           }
+                        });
+
+
+                        data.images.forEach((imageUrl, index) => {
+                            const imageContainer = document.createElement("div");
+                            imageContainer.className = "image-container relative group rounded-lg overflow-hidden transition-all";
+
+                            imageContainer.innerHTML = `
+                                <a href="${imageUrl}" data-fancybox="gallery" data-caption="${'图'} - ${index + 1}"
+                                   class="block w-full h-full">
+                                    <img loading="lazy" src="${imageUrl}" alt="${'图'} - ${index + 1}" class="w-full h-full object-cover transition-all cursor-zoom-in">
+                                    <div class="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-all"></div>
+                                </a>
+                                <a class="download-icon absolute top-2 right-2 bg-black bg-opacity-70 text-white p-2 rounded-full opacity-0 group-hover:opacity-100 transition-all z-10"
+                                   href="#" data-url="${imageUrl}" data-index="${index}">
+                                    <i class="fas fa-download text-sm"></i>
+                                </a>
+                            `;
+                            imageGrid.appendChild(imageContainer);
+                        });
+
+                        scrollableImageGridContainer.appendChild(imageGrid);
+                        contentContainer.appendChild(scrollableImageGridContainer); // Add scrollable content to contentContainer
+
+                        Fancybox.bind("[data-fancybox='gallery']", {});
+                        // --- END MODIFICATION FOR STICKY HEADER ---
+
+                    } else { // 图片列表缺失时的提示
+                        contentContainer.innerHTML = `
+                            <div class="fade-in text-center py-8 text-red-500">
+                                <i class="fas fa-exclamation-triangle text-3xl mb-2"></i>
+                                <p class="text-lg">图集图片链接丢失或无效。</p>
+                                <p class="text-gray-500 text-sm mt-1">此内容可能已被删除或API返回数据结构异常。请<button onclick="fetchData()" class="text-blue-600 hover:underline">重新获取</button>此内容。</p>
+                            </div>
+                        `;
+                    }
+                } else { // Fallback for unknown/unsupported types
+                    contentContainer.innerHTML = `
+                        <div class="fade-in text-center py-8 text-gray-500">
+                            <i class="fas fa-info-circle text-3xl mb-2"></i>
+                            <p class="text-lg">内容类型: ${data.type || '未知'}</p>
+                            <p class="text-gray-500 text-sm mt-1">当前API可能不支持该内容类型或返回数据异常。</p>
+                            <p class="text-gray-500 text-sm mt-1">请<button onclick="fetchData()" class="text-blue-600 hover:underline">重新获取</button>此内容。</p>
+                        </div>
+                    `;
+                }
+
+                infoDiv.innerHTML += `
+                        </div>
+                    </div>
+                `;
+
+                infoContainer.appendChild(infoDiv);
+            }, 300);
         }
 
-        /**
-         * 从剪贴板粘贴 URL 到输入框
-         */
-        function pasteUrl() {
-            navigator.clipboard.readText().then(text => {
-                douyinUrlInput.value = text;
-                showAlert("已从剪贴板粘贴链接或分享文本！", "success");
-            }).catch(err => {
-                console.error('无法读取剪贴板内容: ', err);
-                showAlert("无法读取剪贴板内容，请手动粘贴！", "error");
-            });
-        }
-
-        /**
-         * 显示一个 Toast 风格的警告/成功消息
-         * @param {string} message 消息内容
-         * @param {'success'|'error'} type 消息类型
-         */
         function showAlert(message, type) {
             const alertDiv = document.createElement('div');
             alertDiv.className = `fixed top-4 right-4 px-4 py-3 rounded-lg shadow-lg z-50 fade-in ${type === 'error' ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}`;
@@ -377,345 +614,40 @@
 
             setTimeout(() => {
                 alertDiv.classList.remove('fade-in');
-                alertDiv.classList.add('opacity-0', 'transition-all', 'duration-300'); // Add duration for smooth fade out
+                alertDiv.classList.add('opacity-0', 'transition-all', 'pointer-events-none');
                 setTimeout(() => alertDiv.remove(), 300);
             }, 3000);
         }
 
-        /**
-         * 提取抖音分享文本中的 URL
-         * @param {string} text 完整的分享文本
-         * @returns {string|null} 提取到的 URL 或 null
-         */
-        function extractDouyinUrl(text) {
-            // 匹配抖音短链 v.douyin.com，并包含后面的路径，直到空格或行尾
-            const regex = /(https:\/\/v\.douyin\.com\/[a-zA-Z0-9_-]+\/?)/;
-            const match = text.match(regex);
-            
-            if (match && match[1]) {
-                let url = match[1];
-                 // 确保链接以'/'结尾, 兼容一些API可能要求
-                if (!url.endsWith('/')) {
-                    url += '/';
-                }
-                return url;
-            }
-            return null;
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text)
+                .then(() => {
+                    showAlert("链接已复制到剪贴板！", "success");
+                })
+                .catch(err => {
+                    console.error('复制失败: ', err);
+                    showAlert("复制失败，请手动复制！", "error");
+                });
         }
 
-
-        /**
-         * 主函数：获取数据
-         */
-        async function fetchData() {
-            const id = idInput.value.trim();
-            const key = keyInput.value.trim();
-            const rawDouyinShareLink = douyinUrlInput.value.trim();
-
-            if (!id || !key) {
-                showAlert("请输入完整的 API ID 和 API Key!", "error");
-                return;
-            }
-            if (!rawDouyinShareLink) {
-                showAlert("请输入抖音分享文本或链接!", "error");
-                return;
-            }
-
-            saveApiKeys(); // 每次点击都保存 API Keys 和线路
-
-            const douyinUrl = extractDouyinUrl(rawDouyinShareLink);
-            if (!douyinUrl) {
-                showAlert("无法从输入中提取有效的抖音链接，请检查格式！", "error");
-                return;
-            }
-
-            // 显示加载状态
-            const originalButtonContent = fetchBtn.innerHTML;
-            fetchBtn.innerHTML = '';
-            fetchBtn.classList.add('button-loading');
-            fetchBtn.disabled = true;
-
-            infoContainer.innerHTML = `
-                <div class="flex flex-col items-center justify-center text-gray-400 fade-in">
-                    <i class="fas fa-spinner fa-spin text-4xl mb-2"></i>
-                    <p>正在努力获取信息中...</p>
-                </div>
-            `;
-            contentContainer.innerHTML = `
-                <div class="flex flex-col items-center justify-center text-gray-400 fade-in">
-                    <i class="fas fa-spinner fa-spin text-4xl mb-2"></i>
-                    <p>视频或图片预览加载中...</p>
-                </div>
-            `;
-
-
-            try {
-                const data = await tryFetchDataRecursive(0, id, key, douyinUrl);
-
-                if (data && data.code === 200) {
-                    displayData(data);
-                    addToHistory(rawDouyinShareLink, data);
-                    showAlert("视频信息获取成功！", "success");
-                } else if (data && data.code !== 200) {
-                    displayEmptyContainers(`API 错误: ${data.msg || '未知错误'}`);
-                    showAlert(`获取失败: ${data.msg || '未知错误'}`, "error");
-                } else {
-                    displayEmptyContainers("所有线路尝试失败，请检查网络或稍后重试。");
-                    showAlert("所有线路尝试失败，请检查网络或稍后重试。", "error");
-                }
-            } catch (error) {
-                console.error("整体获取数据失败:", error);
-                displayEmptyContainers(`请求失败: ${error.message}`);
-                showAlert(`请求失败: ${error.message}`, "error");
-            } finally {
-                // 恢复按钮状态
-                fetchBtn.innerHTML = originalButtonContent;
-                fetchBtn.classList.remove('button-loading');
-                fetchBtn.disabled = false;
-            }
+        function pasteUrl() {
+            navigator.clipboard.readText().then(text => {
+                douyinUrlInput.value = text;
+                showAlert("已从剪贴板粘贴链接！", "success");
+            }).catch(err => {
+                console.error('无法读取剪贴板内容: ', err);
+                showAlert("无法读取剪贴板内容！", "error");
+            });
         }
 
-        /**
-         * 递归尝试所有 API 线路
-         * @param {number} routeIndex 当前尝试的线路索引
-         * @param {string} id API ID
-         * @param {string} key API Key
-         * @param {string} douyinUrl 提取出的抖音视频 URL
-         * @returns {Promise<object|null>} 成功则返回数据，失败则返回 null
-         */
-        async function tryFetchDataRecursive(routeIndex, id, key, douyinUrl) {
-            if (routeIndex >= apiRoutes.length) {
-                return null; // 所有线路都已尝试，但都失败了
-            }
-
-            const apiUrl = `${apiRoutes[routeIndex]}?id=${encodeURIComponent(id)}&key=${encodeURIComponent(key)}&url=${encodeURIComponent(douyinUrl)}`;
-            // console.log(`尝试线路 ${routeIndex + 1}: ${apiRoutes[routeIndex]}`);
-
-            try {
-                const response = await fetch(apiUrl);
-                if (!response.ok) {
-                    throw new Error(`HTTP error! Status: ${response.status}`);
-                }
-                const data = await response.json();
-                if (data.code === 200) {
-                    return data; // 成功获取数据
-                } else {
-                    // API 返回错误码，但连接成功。尝试下一条。
-                    console.warn(`线路 ${routeIndex + 1} 返回错误: ${data.msg || '未知错误'}, 尝试下一线路.`);
-                    return await tryFetchDataRecursive(routeIndex + 1, id, key, douyinUrl);
-                }
-            } catch (error) {
-                console.error(`线路 ${routeIndex + 1} 请求失败:`, error);
-                // 当前线路请求失败，尝试下一条
-                return await tryFetchDataRecursive(routeIndex + 1, id, key, douyinUrl);
-            }
-        }
-
-
-        /**
-         * 清空并显示默认状态的容器
-         * @param {string} message 可选的错误或提示消息
-         */
-        function displayEmptyContainers(message = "") {
-            infoContainer.innerHTML = `
-                <div class="flex flex-col items-center justify-center text-gray-400 fade-in">
-                    ${message ? `<p class="text-red-500 font-bold mb-2">${message}</p>` : ''}
-                    <i class="fas fa-info-circle text-4xl mb-2"></i>
-                    <p>请输入抖音链接并点击"获取信息"</p>
-                </div>
-            `;
-            contentContainer.innerHTML = `
-                <div class="flex flex-col items-center justify-center text-gray-400 fade-in">
-                    <i class="fas fa-photo-video text-4xl mb-2"></i>
-                    <p>视频或图片预览将显示在这里</p>
-                </div>
-            `;
-        }
-
-        /**
-         * 在指定容器中显示处理后的数据
-         * @param {object} data
-         */
-        function displayData(data) {
-            // 清空容器
-            infoContainer.innerHTML = "";
-            contentContainer.innerHTML = "";
-
-            // --- 渲染 Info Container ---
-            const infoDiv = document.createElement('div');
-            infoDiv.className = 'w-full fade-in'; // Tailwind class for full width
-
-            infoDiv.innerHTML = `
-                <div class="flex flex-col gap-6">
-                    ${data.cover ? `
-                        <div class="flex items-center justify-center">
-                            <img src="${data.cover}" alt="封面" class="w-full max-w-sm h-auto rounded-lg shadow-md border border-gray-100">
-                        </div>` : ''}
-                    <div>
-                        <h3 class="text-xl font-semibold text-gray-800 mb-2 flex items-center">
-                            <i class="fas fa-user-circle text-blue-500 mr-2"></i> ${data.name || '未知作者'}
-                        </h3>
-                        <p class="text-gray-700 mb-2">
-                            <i class="fas fa-heading text-purple-500 mr-2"></i> 标题:
-                            <span id="video-title" class="title-clamp">${data.title || '无标题'}</span>
-                            <span id="expand-button" class="expand-button" onclick="toggleTitleExpansion()">展开</span>
-                        </p>
-                        ${data.signature ? `
-                            <p class="text-gray-600 text-sm flex items-center">
-                                <i class="fas fa-pen-nib text-green-500 mr-2"></i> 签名: ${data.signature}
-                            </p>
-                        ` : ''}
-                    </div>
-            `;
-
-            // 音乐信息
-            if (data.musictitle || (data.musiccover && data.musiccover.length > 0)) {
-                infoDiv.innerHTML += `
-                    <div class="border-t border-gray-100 pt-4 mt-4">
-                        <h4 class="text-lg font-semibold text-gray-800 mb-2 flex items-center">
-                            <i class="fas fa-music text-pink-500 mr-2"></i> 音乐信息
-                        </h4>
-                        ${data.musictitle ? `<p class="text-gray-700 mb-1">标题: ${data.musictitle}</p>` : ''}
-                        ${data.musicauthor ? `<p class="text-gray-600 text-sm mb-1">作者: ${data.musicauthor}</p>` : ''}
-                        ${data.musiccover && data.musiccover.length > 0 ? `
-                        <div class="mt-2 flex items-center justify-center">
-                            <img src="${data.musiccover[0]}" alt="音乐封面" class="w-24 h-24 object-cover rounded-lg shadow-sm border border-gray-100">
-                        </div>` : ''}
-                    </div>
-                `;
-            }
-
-            // --- 渲染 Content Container ---
-            const contentDiv = document.createElement('div');
-            contentDiv.className = 'w-full fade-in';
-
-            if (data.type === "视频") {
-                // Info Container 添加视频相关操作按钮
-                infoDiv.innerHTML += `
-                    <div class="mt-4 flex flex-col sm:flex-row gap-3 border-t border-gray-100 pt-4">
-                        <button onclick="copyToClipboard('${data.yvideo}')"
-                            class="flex-1 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg text-sm flex items-center justify-center transition-all">
-                            <i class="fas fa-copy mr-2"></i> 复制视频链接
-                        </button>
-                        <button onclick="downloadResource('${data.video}', '${data.name || '未知作者'}_${data.title || '无标题'}.mp4')"
-                            class="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm inline-flex items-center justify-center transition-all">
-                            <i class="fas fa-download mr-2"></i> 下载高清视频
-                        </button>
-                    </div>
-                `;
-
-                // Content Container 显示视频播放器
-                contentDiv.innerHTML = `
-                    <h3 class="text-xl font-semibold text-gray-800 mb-4 flex items-center">
-                        <i class="fas fa-play-circle text-red-500 mr-2"></i> 视频预览
-                    </h3>
-                    <div class="video-player-container">
-                        <video id="video-player" controls poster="${data.cover}" src="${data.yvideo}" type="video/mp4">
-                            您的浏览器不支持 HTML5 视频。
-                        </video>
-                    </div>
-                `;
-            } else if (data.type === "图集") {
-                // Info Container 添加图集相关操作
-                infoDiv.innerHTML += `
-                    <div class="mt-4 flex flex-row gap-3 border-t border-gray-100 pt-4">
-                        <button onclick="copyToClipboard('${data.images[0] || data.cover}')"
-                            class="flex-1 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg text-sm flex items-center justify-center transition-all">
-                            <i class="fas fa-copy mr-2"></i> 复制首图链接
-                        </button>
-                    </div>
-                `;
-
-                // Content Container 显示图集图片
-                contentDiv.innerHTML = `
-                    <h3 class="text-xl font-semibold text-gray-800 mb-4 flex items-center">
-                        <i class="fas fa-images text-green-500 mr-2"></i> 图片预览 (${data.images.length}张)
-                    </h3>
-                    <div class="flex flex-col sm:flex-row items-center gap-3 mb-4 bg-gray-50 p-3 rounded-lg">
-                        <input type="text" id="filename-input" placeholder="输入下载文件名 (例如: 抖音图片)" value="${data.title || '抖音图片'}"
-                            class="flex-1 w-full sm:w-auto px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm">
-                        <button id="download-all-images-btn"
-                            class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg inline-flex items-center justify-center transition-all text-sm whitespace-nowrap">
-                            <i class="fas fa-download mr-2"></i> 一键下载所有图片
-                        </button>
-                    </div>
-                    <div id="image-grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-                        ${data.images.map((imgUrl, index) => `
-                            <div class="image-container relative group rounded-lg overflow-hidden transition-all">
-                                <img src="${imgUrl}" alt="图片 ${index + 1}" class="w-full h-auto object-cover transition-all">
-                                <div class="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-all"></div>
-                                <a class="download-icon absolute top-2 right-2 bg-black bg-opacity-70 text-white p-2 rounded-full opacity-0 group-hover:opacity-100 transition-all z-10"
-                                   href="#" data-url="${imgUrl}" data-index="${index}">
-                                    <i class="fas fa-download text-sm"></i>
-                                </a>
-                            </div>
-                        `).join('')}
-                    </div>
-                `;
-                // Add event listener for "一键下载所有图片" button
-                setTimeout(() => { // Use setTimeout to ensure button is rendered
-                    const downloadAllImagesBtn = document.getElementById('download-all-images-btn');
-                    if (downloadAllImagesBtn) {
-                        downloadAllImagesBtn.addEventListener('click', () => {
-                            const filename = document.getElementById('filename-input').value.trim() || '抖音图片';
-                            downloadAllImages(data.images, filename);
-                        });
-                    }
-                    // Add event listener for individual image downloads using delegation
-                    const imageGrid = document.getElementById('image-grid');
-                    if (imageGrid) {
-                        imageGrid.addEventListener('click', (event) => {
-                            const downloadLink = event.target.closest('.download-icon');
-                            if (downloadLink) {
-                                event.preventDefault();
-                                const imageUrl = downloadLink.dataset.url;
-                                const index = parseInt(downloadLink.dataset.index) + 1; // 1-based index
-                                const baseFilename = document.getElementById('filename-input').value.trim() || '抖音图片';
-                                const filename = `${baseFilename}_${index}.jpg`;
-                                downloadResource(imageUrl, filename);
-                            }
-                        });
-                    }
-                }, 0); // Small delay to ensure DOM is updated
-            } else {
-                 infoDiv.innerHTML += `
-                    <div class="mt-4 border-t border-gray-100 pt-4 text-center">
-                        <p class="text-red-500 font-bold">未知类型内容</p>
-                    </div>
-                `;
-                contentDiv.innerHTML = `
-                    <div class="flex flex-col items-center justify-center text-gray-400 fade-in">
-                        <i class="fas fa-question-circle text-4xl mb-2"></i>
-                        <p>该内容类型无法预览或处理。</p>
-                        <p class="text-sm">类型: ${data.type || '未知'}</p>
-                    </div>
-                `;
-            }
-
-            infoContainer.appendChild(infoDiv);
-            contentContainer.appendChild(contentDiv);
-            infoContainer.scrollTop = 0; // Scroll to top of info
-            contentContainer.scrollTop = 0; // Scroll to top of content
-        }
-
-        /**
-         * 下载文件（视频或图片）
-         * @param {string} url 资源URL
-         * @param {string} filename 下载的文件名
-         */
         function downloadResource(url, filename) {
-            // console.log(`Attempting to download: ${url} as ${filename}`);
-            showAlert(`开始下载: ${filename}`, "success");
             fetch(url, {
-                mode: 'cors', // 确保跨域请求凭证策略
+                mode: 'cors',
                 redirect: 'follow'
             })
             .then(response => {
                 if (!response.ok) {
-                    if (response.status === 403) {
-                         throw new Error(`下载失败 (403 Forbidden). 视频源可能受到防盗链限制，请尝试在浏览器中直接访问链接或使用专业的下载工具。`);
-                    }
-                    throw new Error(`网络响应不佳: ${response.status}`);
+                    throw new Error(`Network response was not ok: ${response.status}`);
                 }
                 return response.blob();
             })
@@ -728,74 +660,55 @@
                 a.click();
                 URL.revokeObjectURL(a.href);
                 document.body.removeChild(a);
-                // showAlert("下载已开始！", "success"); // Already shown at the start of function
+                showAlert("下载已开始！", "success");
             })
             .catch(error => {
-                console.error('下载出错:', error);
-                showAlert(`下载失败！${error.message}`, "error");
+                console.error('Download error:', error);
+                showAlert("下载失败！", "error");
             });
         }
 
-        /**
-         * 下载所有图片
-         * @param {Array<string>} imageUrls 图片URL数组
-         * @param {string} baseFilename 基础文件名
-         */
         function downloadAllImages(imageUrls, baseFilename) {
-            showAlert(`开始下载 ${imageUrls.length} 张图片...`, "success");
             if (!imageUrls || imageUrls.length === 0) {
-                showAlert("没有图片可以下载。", "error");
+                showAlert("没有图片可供下载！", "error");
                 return;
             }
-            // 使用 Promise.allSettled 来等待所有下载尝试完成，并显示最终结果
-            const downloadPromises = imageUrls.map((imageUrl, index) => {
-                return new Promise(resolve => {
-                    setTimeout(() => { // stagger downloads
-                        const filename = `${baseFilename}_${index + 1}.jpg`;
-                        downloadResource(imageUrl, filename);
-                        resolve(); // Resolve immediately after initiating download, as alerts handle success/failure
-                    }, index * 300); // 300ms delay between each download
-                });
-            });
-
-            // 可以选择在这里等待所有 Promise 完成，然后显示汇总消息
-            Promise.allSettled(downloadPromises).then(() => {
-                // showAlert("所有图片下载任务已发送！请检查下载列表。", "success");
+            showAlert(`开始下载 ${imageUrls.length} 张图片...`, "success");
+            imageUrls.forEach((imageUrl, index) => {
+                setTimeout(() => {
+                    downloadResource(imageUrl, `${baseFilename}_${index + 1}.jpg`);
+                }, index * 300);
             });
         }
 
-
-        /**
-         * 将解析结果添加到历史记录
-         * @param {string} rawShareLink 原始分享链接
-         * @param {object} apiResponse API响应数据
-         */
-        function addToHistory(rawShareLink, apiResponse) {
-            const newRecord = {
-                rawShareLink: rawShareLink,
-                data: apiResponse,
-                timestamp: Date.now()
+        function addToHistory(url, data) {
+            // 这次我们创建一个只包含业务数据的历史记录对象，不包含 code。
+            const historyItemData = {
+                cover: data.cover || '',
+                name: data.name || '',
+                title: data.title || '',
+                type: data.type || '未知',
+                video: data.video || '', // 确保视频链接被保存
+                yvideo: data.yvideo || '', // 确保带水印视频链接被保存
+                images: Array.isArray(data.images) ? data.images : [] // 确保图片列表被保存
             };
 
-            // 检查是否已存在相同的分享链接，若有则移除旧记录
-            history = history.filter(item => item.rawShareLink !== rawShareLink);
-
-            history.unshift(newRecord); // 添加到数组开头
-
-            // 限制历史记录数量，例如最多20条
-            if (history.length > 20) {
-                history = history.slice(0, 20);
+            const existingIndex = history.findIndex(item => item.url === url);
+            if (existingIndex !== -1) {
+                history.splice(existingIndex, 1);
             }
-
-            saveHistory();
+            // 存储只包含业务数据的对象
+            history.unshift({ url: url, data: historyItemData }); 
+            if (history.length > 10) {
+                history.pop();
+            }
+            localStorage.setItem("douyinHistory", JSON.stringify(history));
             displayHistory();
         }
 
-        /**
-         * 渲染历史记录列表
-         */
         function displayHistory() {
-            historyList.innerHTML = ""; // 清空现有列表
+            const historyList = document.getElementById("history-list");
+            historyList.innerHTML = "";
 
             if (history.length === 0) {
                 historyList.innerHTML = `
@@ -808,55 +721,91 @@
 
             history.forEach((item, index) => {
                 const listItem = document.createElement("li");
-                listItem.className = "py-3 flex items-center justify-between group fade-in";
                 
-                const titleText = item.data.title && item.data.title.length > 20 ? item.data.title.substring(0, 18) + '...' : item.data.title;
+                // 修改 listItem 的 className，使其成为一个120px宽的卡片
+                listItem.className = "relative w-[120px] p-2 group border border-gray-200 hover:bg-gray-100 transition-all fade-in cursor-pointer rounded-md";
+                listItem.onclick = () => loadHistoryItem(index);
+
+                
+                const coverImage = item.data && item.data.cover ? item.data.cover : 'https://via.placeholder.com/120x160?text=No+Cover';
+                const videoTitle = item.data && (item.data.title || item.data.name) ? (item.data.title || item.data.name) : '未知标题';
 
                 listItem.innerHTML = `
-                    <a href="#" onclick="loadHistoryItem(${index})"
-                        class="text-blue-600 hover:text-blue-800 flex-1 truncate pr-2" title="${item.data.title}">
-                        <i class="fas fa-link mr-2 text-gray-400"></i>${titleText || item.rawShareLink.substring(0, 20) + '...'}
+                    <!-- 视频封面 (占据全部宽度，保持3/4比例) -->
+                    <div class="w-full aspect-[3/4] overflow-hidden rounded-md flex-shrink-0 bg-gray-200 flex items-center justify-center mb-2">
+                        <img src="${coverImage}" alt="视频封面" class="w-full h-full object-cover shadow-sm">
+                    </div>
+
+                    <!-- 视频标题 (2行截断) -->
+                    <p class="text-xs font-medium text-gray-800 mb-1 line-clamp-2">${videoTitle}</p>
+
+                    <!-- 原始URL (点击复制，截断显示，悬浮显示完整URL) -->
+                    <a href="#" onclick="event.stopPropagation(); copyToClipboard('${item.url}');"
+                       title="${item.url}"
+                       class="text-[10px] text-gray-500 hover:text-blue-600 hover:underline truncate w-full block">
+                        ${item.url}
                     </a>
-                    <button onclick="deleteHistoryItem(${index})"
-                        class="text-red-500 hover:text-red-700 transition-all">
-                        <i class="fas fa-trash-alt"></i>
+
+                    <!-- 删除按钮 (悬浮显示在右上角) -->
+                    <button onclick="event.stopPropagation(); deleteHistoryItem(${index})"
+                        class="absolute top-1 right-1 text-gray-400 hover:text-red-600 transition-all p-1 rounded-full bg-white/80 hover:bg-red-100 opacity-0 group-hover:opacity-100 flex items-center justify-center w-6 h-6">
+                        &times;
                     </button>
                 `;
                 historyList.appendChild(listItem);
             });
+            
         }
 
-        /**
-         * 加载历史记录中的某个视频到当前显示区域
-         * @param {number} index 历史记录数组中的索引
-         */
         function loadHistoryItem(index) {
             const item = history[index];
-            if (item) {
-                douyinUrlInput.value = item.rawShareLink; // 将分享链接填回输入框
-                displayData(item.data);
-                showAlert("已从历史记录加载！", "success");
-                // 滚动到 Content Container 顶部
-                contentContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            }
+            douyinUrlInput.value = item.url; 
+            displayData(item.data); // 将历史记录中的业务数据传递给 displayData
+
+            setTimeout(() => {
+                document.getElementById('content-container').scrollIntoView({
+                    behavior: 'smooth',
+                    block: 'start' 
+                });
+            }, 200);
+
+            showAlert("已加载历史记录！", "success");
         }
 
-        /**
-         * 删除历史记录中的某个视频
-         * @param {number} index 历史记录数组中的索引
-         */
         function deleteHistoryItem(index) {
-            if (confirm('确定要删除这条历史记录吗？')) {
-                history.splice(index, 1);
-                saveHistory();
-                displayHistory();
-                displayEmptyContainers("历史记录已删除。"); // 清空当前显示并提示
-                douyinUrlInput.value = ''; // 清空输入框
+            history.splice(index, 1);
+            localStorage.setItem("douyinHistory", JSON.stringify(history));
+            displayHistory(); 
 
-                showAlert("历史记录已删除！", "success");
-            }
+            document.getElementById("info-container").innerHTML = `
+                <div class="flex flex-col items-center justify-center min-h-[200px] text-gray-400">
+                    <i class="fas fa-info-circle text-4xl mb-2"></i>
+                    <p>请输入抖音链接并点击"获取信息"开始</p>
+                </div>
+            `;
+            document.getElementById("content-container").innerHTML = `
+                <div class="flex flex-col items-center justify-center min-h-[200px] text-gray-400">
+                    <i class="fas fa-photo-video text-4xl mb-2"></i>
+                    <p>视频或图片内容将显示在这里</p>
+                </div>
+            `;
+            douyinUrlInput.value = ""; 
+
+            showAlert("已删除历史记录！", "success");
         }
 
+        function toggleTitleExpansion() {
+            const titleSpan = document.getElementById('video-title');
+            const expandButton = document.getElementById('expand-button');
+
+            if (titleSpan.classList.contains('expanded')) {
+                titleSpan.classList.remove('expanded');
+                expandButton.textContent = '展开';
+            } else {
+                titleSpan.classList.add('expanded');
+                expandButton.textContent = '收起';
+            }
+        }
     </script>
 </body>
 </html>
