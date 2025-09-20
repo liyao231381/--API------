@@ -3,425 +3,232 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>抖音视频解析与下载</title>
+    <title>抖音视频信息获取</title>
+    <link rel="icon" href="https://www.douyin.com/favicon.ico"> <!-- Using Douyin favicon for consistency -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        /* 全局样式 */
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            margin: 0;
-            padding: 20px;
-            background-color: #f0f2f5;
-            color: #333;
-            display: flex;
-            flex-direction: column;
-            gap: 20px;
-            min-height: 100vh;
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
         }
-
-        /* 主容器 */
-        #app-container {
-            max-width: 1200px;
-            margin: 0 auto;
-            background-color: #fff;
-            padding: 25px;
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1;
             border-radius: 10px;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-            width: 100%; /* 确保在小屏幕上也能占满宽度 */
-            box-sizing: border-box; /* 包含padding和border在宽度内 */
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #888;
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #555;
         }
 
-        h1 {
-            color: #1a1a1a;
-            text-align: center;
-            margin-bottom: 30px;
-            font-size: 2.2em;
+        /* Animation */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
         }
 
-        /* 输入部分 */
-        #input-section {
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
-            margin-bottom: 30px;
-            border-bottom: 1px solid #eee;
-            padding-bottom: 25px;
+        .fade-in {
+            animation: fadeIn 0.3s ease-out forwards;
         }
 
-        #input-section label {
-            font-size: 1.1em;
-            font-weight: bold;
-            color: #555;
+        /* Custom select arrow */
+        .custom-select {
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='%236b7280'%3E%3Cpath d='M7.247 11.14 2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 0.75rem center;
+            background-size: 16px 12px;
+            -webkit-appearance: none; /* Remove default arrow */
+            -moz-appearance: none;
+            appearance: none;
         }
 
-        #shareLinkInput {
-            width: 100%;
-            min-height: 80px;
-            padding: 12px 15px;
-            border: 1px solid #ddd;
-            border-radius: 8px;
-            font-size: 1em;
-            resize: vertical; /* 允许垂直调整大小 */
-            box-sizing: border-box;
-            transition: border-color 0.3s ease, box-shadow 0.3s ease;
-        }
 
-        #shareLinkInput:focus {
-            border-color: #007bff;
-            outline: none;
-            box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.25);
-        }
-
-        #goButton {
-            padding: 12px 25px;
-            background-color: #fe2c55; /* 抖音品牌色 */
-            color: white;
-            border: none;
-            border-radius: 8px;
-            font-size: 1.1em;
-            cursor: pointer;
-            transition: background-color 0.3s ease, transform 0.2s ease;
-            align-self: flex-start; /* 按钮靠左对齐 */
-        }
-
-        #goButton:hover {
-            background-color: #e02b4e;
-            transform: translateY(-1px);
-        }
-
-        #goButton:active {
-            transform: translateY(0);
-        }
-
-        /* 消息提示 */
-        .message {
-            margin-top: 10px;
-            padding: 10px 15px;
-            border-radius: 5px;
-            font-size: 0.9em;
-            display: none; /* 默认隐藏 */
-        }
-
-        .message.error {
-            background-color: #ffe6e6;
-            color: #cc0000;
-            border: 1px solid #ffb3b3;
-        }
-
-        .message.success {
-            background-color: #e6ffe6;
-            color: #008000;
-            border: 1px solid #b3ffb3;
-        }
-
-        /* 主视频显示区 */
-        #main-display {
-            background-color: #f9f9f9;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
-            min-height: 400px; /* 保证一定的显示高度 */
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center; /* 垂直居中内容 */
-            text-align: center;
-            gap: 15px;
-            margin-bottom: 30px;
-            border-bottom: 1px solid #eee;
-            padding-bottom: 25px;
-        }
-
-        #videoPlayer {
-            width: 100%;
-            max-width: 700px; /* 限制视频播放器最大宽度 */
-            height: auto;
-            border-radius: 8px;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-        }
-
-        #videoTitle {
-            font-size: 1.6em;
-            color: #333;
-            margin: 10px 0 5px;
-            line-height: 1.5;
-            max-height: 4.8em; /* 限制标题最多显示 3 行 (1.6em * 1.5 line-height * 2 lines) */
-            overflow: hidden;
-            text-overflow: ellipsis;
-            display: -webkit-box;
-            -webkit-line-clamp: 3; /* 限制行数 */
-            -webkit-box-orient: vertical;
-        }
-
-        #videoAuthor {
-            font-size: 1.1em;
-            color: #666;
-            margin-bottom: 15px;
-        }
-
-        #downloadButton {
-            display: inline-block;
-            padding: 10px 20px;
-            background-color: #28a745;
-            color: white;
-            text-decoration: none;
-            border-radius: 5px;
-            font-size: 1em;
-            transition: background-color 0.3s ease;
+        /* Button loading state */
+        .button-loading {
             position: relative;
-            overflow: hidden;
-            visibility: hidden; /* 默认隐藏 */
-            opacity: 0;
-            cursor: pointer;
-            pointer-events: none; /* 禁用点击事件 */
+            pointer-events: none; /* Disable interaction */
+            color: transparent !important; /* Hide button text */
         }
-        #downloadButton.visible {
-            visibility: visible;
-            opacity: 1;
-            pointer-events: auto; /* 启用点击事件 */
-            transition: visibility 0s, opacity 0.5s ease-in-out;
-        }
-
-        #downloadButton:hover {
-            background-color: #218838;
-        }
-        
-        #main-display .placeholder {
-            min-height: 300px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            flex-direction: column;
-            color: #aaa;
-            font-size: 1.2em;
-            text-align: center;
-            border: 2px dashed #e0e0e0;
-            border-radius: 8px;
-            width: 100%;
-            max-width: 700px;
-            box-sizing: border-box;
-            padding: 20px;
-        }
-        #main-display .placeholder p {
-            margin: 0;
-        }
-
-        /* 历史记录区 */
-        #history-section h3 {
-            font-size: 1.4em;
-            color: #333;
-            margin-bottom: 20px;
-            border-left: 5px solid #fe2c55; /* 抖音品牌色 */
-            padding-left: 10px;
-        }
-
-        #historyList {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); /* 响应式网格布局 */
-            gap: 20px;
-        }
-
-        .history-card {
-            background-color: #fff;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-            border: 1px solid #eee;
-            transition: all 0.2s ease-in-out;
-            position: relative;
-        }
-
-        .history-card:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 6px 15px rgba(0, 0, 0, 0.1);
-        }
-
-        .history-card h4 {
-            font-size: 1.1em;
-            color: #1a1a1a; /* 更深一点的颜色 */
-            margin: 0;
-            cursor: pointer; /* 表示可点击 */
-            display: -webkit-box;
-            -webkit-line-clamp: 3;
-            -webkit-box-orient: vertical;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            line-height: 1.5;
-            height: 4.5em; /* 3 行 * 1.5 line-height */
-            transition: color 0.2s ease;
-        }
-         .history-card h4:hover {
-            text-decoration: underline;
-            color: #fe2c55; /* 抖音品牌色 */
-         }
-
-        .history-card p {
-            margin: 0;
-            font-size: 0.9em;
-            color: #666;
-            line-height: 1.4;
-        }
-
-        .history-card .author {
-            font-weight: bold;
-            color: #555;
-        }
-
-        /* 链接样式 */
-        .history-card .url-link,
-        .history-card .video-url-hq-link {
-            display: flex;
-            align-items: center;
-            gap: 5px;
-            cursor: pointer;
-            text-decoration: none;
-            font-size: 0.85em;
-            position: relative; /* 用于 tooltip 定位 */
-            padding: 5px 0; /* 增加点击区域 */
-            box-sizing: border-box;
-        }
-        .history-card .url-link { color: #007bff; }
-        .history-card .video-url-hq-link { color: #28a745; }
-
-        .history-card .url-link:hover,
-        .history-card .video-url-hq-link:hover {
-            text-decoration: underline;
-        }
-        .history-card .url-link span,
-        .history-card .video-url-hq-link span {
-             white-space: nowrap;
-             overflow: hidden;
-             text-overflow: ellipsis;
-             flex-grow: 1;
-        }
-        .history-card .url-link::before {
-             content: '🔗'; /* 链接图标 */
-             display: inline-block;
-             margin-right: 5px;
-        }
-        .history-card .video-url-hq-link::before {
-             content: '🎥'; /* 视频图标 */
-             display: inline-block;
-             margin-right: 5px;
-        }
-
-        /* 提示框 */
-        .tooltip {
+        .button-loading::after {
+            content: "";
             position: absolute;
-            background-color: rgba(0, 0, 0, 0.8);
-            color: #fff;
-            padding: 5px 10px;
-            border-radius: 4px;
-            font-size: 0.8em;
-            white-space: nowrap;
-            z-index: 100;
-            opacity: 0;
-            visibility: hidden;
-            transition: opacity 0.3s, visibility 0.3s;
-            bottom: calc(100% + 5px); /* 定位在元素上方 */
-            left: 50%;
-            transform: translateX(-50%);
-            pointer-events: none; /* 允许点击穿透 */
+            width: 16px;
+            height: 16px;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            margin: auto;
+            border: 3px solid transparent;
+            border-top-color: white;
+            border-radius: 50%;
+            animation: button-loading-spinner 1s ease infinite;
+        }
+        @keyframes button-loading-spinner {
+            from { transform: rotate(0turn); }
+            to { transform: rotate(1turn); }
         }
 
-        .url-link:hover .tooltip,
-        .video-url-hq-link:hover .tooltip {
-            opacity: 1;
-            visibility: visible;
+        /* Video player styling */
+        .video-player-container {
+            position: relative;
+            padding-bottom: 56.25%; /* 16:9 Aspect Ratio */
+            height: 0;
+            overflow: hidden;
+            max-width: 100%;
+            background: black;
+            border-radius: 0.5rem;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        }
+        #video-player {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
         }
 
-        .history-card .actions {
-            display: flex;
-            justify-content: flex-end;
-            margin-top: 10px;
+        /* Smooth transitions */
+        .transition-all {
+            transition: all 0.2s ease;
         }
 
-        .history-card .delete-btn {
-            background-color: #dc3545;
-            color: white;
-            border: none;
-            padding: 8px 12px;
-            border-radius: 5px;
+        /* Title clamping and expand/collapse */
+        .title-clamp {
+            display: -webkit-box;
+            -webkit-box-orient: vertical;
+            -webkit-line-clamp: 3; /* Limit to 3 lines */
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .title-clamp.expanded {
+            -webkit-line-clamp: unset; /* Show full content when expanded */
+            overflow: visible;
+            text-overflow: unset;
+        }
+
+        .expand-button {
             cursor: pointer;
-            font-size: 0.85em;
-            transition: background-color 0.3s ease;
+            color: #1d4ed8; /* blue-700 */
+            font-size: 0.875rem; /* text-sm */
+            margin-top: 0.5rem;
+            display: inline-block;
         }
 
-        .history-card .delete-btn:hover {
-            background-color: #c82333;
+        /* Image hover effect for grid */
+        .image-container:hover img {
+            transform: scale(1.03);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        }
+        .image-container img { /* Ensure smooth transition for scaling */
+            transition: transform 0.3s ease-in-out, box-shadow 0.3s ease-in-out;
+        }
+
+        /* History list item hover for trash icon */
+        #history-list .group:hover .fa-trash-alt {
+            opacity: 1;
+        }
+        #history-list .fa-trash-alt {
+            opacity: 0;
+            transition: opacity 0.2s ease-in-out;
         }
         
-        /* 历史记录为空时的消息 */
-        .empty-history-message {
-            text-align: center;
-            color: #888;
-            font-size: 1.1em;
-            padding: 30px;
-            border: 1px dashed #ddd;
-            border-radius: 8px;
-            background-color: #fcfcfc;
-            grid-column: 1 / -1; /* 占据整个网格行 */
-        }
-
-        /* 响应式设计 */
-        @media (max-width: 768px) {
-            body {
-                padding: 15px;
-            }
-            #app-container {
-                padding: 15px;
-            }
-            h1 {
-                font-size: 1.8em;
-            }
-            #input-section, #main-display {
-                margin-bottom: 20px;
-                padding-bottom: 20px;
-            }
-            #historyList {
-                grid-template-columns: 1fr; /* 小屏幕上单列布局 */
-            }
-            #goButton {
-                align-self: stretch; /* 按钮全宽 */
-            }
-            #main-display .placeholder {
-                min-height: 200px;
-            }
-            #videoTitle {
-                font-size: 1.4em;
-            }
-        }
     </style>
 </head>
-<body>
-    <div id="app-container">
-        <h1>抖音视频解析与下载</h1>
+<body class="bg-gray-50 min-h-screen">
+    <div class="container max-w-full h-screen mx-auto p-4 lg:p-0">
+        <!-- Main layout container -->
+        <div class="flex flex-col lg:flex-row shadow-lg rounded-xl overflow-hidden bg-white">
 
-        <div id="input-section">
-            <label for="shareLinkInput">粘贴抖音分享链接或内容:</label>
-            <textarea id="shareLinkInput" placeholder="例如: 5.64 10/24 dnD:/ j@c.Ag 1/2：一部电影19个广告净赚8000万... https://v.douyin.com/2MZfm_weKt8/ 复制此链接，打开Dou音搜索，直接观看视频！"></textarea>
-            <button id="goButton">Go - 解析视频</button>
-            <div id="messageBox" class="message" aria-live="polite"></div>
-        </div>
+            <!-- Left column (Parameters and History) -->
+            <div class="flex flex-col w-full lg:w-1/4 lg:h-screen lg:overflow-y-auto border-r border-gray-100">
+                <!-- Input panel -->
+                <div class="p-6 border-b border-gray-100">
+                    <h2 class="text-xl font-semibold text-gray-800 mb-4 flex items-center">
+                        <i class="fas fa-cog text-orange-500 mr-2"></i> 参数设置
+                    </h2>
 
-        <div id="main-display">
-            <h2 id="videoTitle"></h2>
-            <p id="videoAuthor"></p>
-            <video id="videoPlayer" controls autoplay style="display: none;"></video>
-            <a id="downloadButton" target="_blank" rel="noopener noreferrer">下载高清视频</a>
-            <div class="placeholder" id="mainDisplayPlaceholder">
-                <p>在此处粘贴抖音分享链接</p>
-                <p>并点击“Go - 解析视频”</p>
+                    <div class="space-y-4">
+                        <div>
+                            <label for="api-route" class="block text-sm font-medium text-gray-700 mb-1 flex items-center">
+                                <i class="fas fa-route text-blue-500 mr-2 text-xs"></i> API线路
+                            </label>
+                            <select id="api-route" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 custom-select">
+                                <option value="0">默认线路</option>
+                                <option value="1">线路1</option>
+                                <option value="2">线路2</option>
+                                <option value="3">线路3</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label for="id" class="block text-sm font-medium text-gray-700 mb-1 flex items-center">
+                                <i class="fas fa-id-card text-purple-500 mr-2 text-xs"></i> ID
+                            </label>
+                            <input type="text" id="id" placeholder="请输入您的ID"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                        </div>
+
+                        <div>
+                            <label for="key" class="block text-sm font-medium text-gray-700 mb-1 flex items-center">
+                                <i class="fas fa-key text-yellow-500 mr-2 text-xs"></i> Key
+                            </label>
+                            <input type="text" id="key" placeholder="请输入您的Key"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                        </div>
+
+                        <div>
+                            <label for="douyin-url" class="block text-sm font-medium text-gray-700 mb-1 flex items-center">
+                                <i class="fab fa-tiktok text-pink-500 mr-2 text-xs"></i> 抖音视频链接
+                            </label>
+                            <input type="text" id="douyin-url" placeholder="请输入抖音分享文本或链接"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 mb-2">
+
+                            <div class="flex justify-between gap-2">
+                                <button onclick="pasteUrl()"
+                                    class="flex-1 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg flex items-center justify-center transition-all text-sm">
+                                    <i class="fas fa-paste mr-2"></i> 粘贴链接
+                                </button>
+                                <button id="fetch-btn" onclick="fetchData()"
+                                    class="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg flex items-center justify-center transition-all text-sm">
+                                    <i class="fas fa-cloud-download-alt mr-2"></i> 获取信息
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- History panel -->
+                <div id="history-panel" class="p-6 lg:flex-1 overflow-y-auto">
+                    <h2 class="text-xl font-semibold text-gray-800 mb-4 flex items-center">
+                        <i class="fas fa-history text-green-500 mr-2"></i> 历史记录
+                    </h2>
+                    <ul id="history-list" class="divide-y divide-gray-200">
+                        <li class="py-3 text-center text-gray-400">
+                            <i class="fas fa-clock mr-2"></i>暂无历史记录
+                        </li>
+                    </ul>
+                </div>
             </div>
-        </div>
 
-        <div id="history-section">
-            <h3>历史记录</h3>
-            <div id="historyList">
-                <div class="empty-history-message" id="emptyHistoryMsg">
-                    <p>暂无历史记录。请解析一个视频来创建记录。</p>
+            <!-- Content panel -->
+            <div id="content-container" class="p-6 flex-grow w-full lg:w-1/2 lg:h-screen overflow-y-auto border-r border-gray-100 flex flex-col items-center justify-center">
+                <div class="flex flex-col items-center justify-center text-gray-400">
+                    <i class="fas fa-photo-video text-4xl mb-2"></i>
+                    <p>视频或图片预览将显示在这里</p>
+                </div>
+            </div>
+
+            <!-- Info panel -->
+            <div id="info-container" class="p-6 flex-grow w-full lg:w-1/4 lg:h-screen overflow-y-auto flex flex-col items-center justify-center">
+                <div class="flex flex-col items-center justify-center text-gray-400">
+                    <i class="fas fa-info-circle text-4xl mb-2"></i>
+                    <p>请输入抖音链接并点击"获取信息"</p>
                 </div>
             </div>
         </div>
@@ -429,308 +236,626 @@
 
     <script>
         // DOM 元素引用
-        const shareLinkInput = document.getElementById('shareLinkInput');
-        const goButton = document.getElementById('goButton');
-        const videoTitle = document.getElementById('videoTitle');
-        const videoAuthor = document.getElementById('videoAuthor');
-        const videoPlayer = document.getElementById('videoPlayer');
-        const downloadButton = document.getElementById('downloadButton');
-        const historyList = document.getElementById('historyList');
-        const messageBox = document.getElementById('messageBox');
-        const mainDisplayPlaceholder = document.getElementById('mainDisplayPlaceholder');
-        const emptyHistoryMsg = document.getElementById('emptyHistoryMsg');
+        const idInput = document.getElementById("id");
+        const keyInput = document.getElementById("key");
+        const douyinUrlInput = document.getElementById("douyin-url");
+        const apiRouteSelect = document.getElementById("api-route");
+        const fetchBtn = document.getElementById("fetch-btn");
+        const contentContainer = document.getElementById("content-container");
+        const infoContainer = document.getElementById("info-container");
+        const historyList = document.getElementById("history-list");
 
-        // 第三方API地址
-        const API_BASE_URL = 'https://api.mmp.cc/api/Jiexi';
-        // LocalStorage Key
-        const LOCAL_STORAGE_KEY = 'douyin_video_history';
+        // 预设的 API ID 和 Key
+        const defaultId = "10003120";
+        const defaultKey = "bfb75036b210ed35bee6e002d623293c";
+
+        // API 线路列表
+        const apiRoutes = [
+            "https://cn.apihz.cn/api/fun/douyin.php",
+            "http://101.35.2.25/api/fun/douyin.php",
+            "http://124.222.204.22/api/fun/douyin.php",
+            "http://124.220.49.230/api/fun/douyin.php"
+        ];
+
+        // 本地存储键名
+        const LOCAL_STORAGE_HISTORY_KEY = "douyinHistory";
+        const LOCAL_STORAGE_ID_KEY = "douyinApiId";
+        const LOCAL_STORAGE_KEY_KEY = "douyinApiKey";
+        const LOCAL_STORAGE_ROUTE_KEY = "douyinApiRoute";
+
+        let history = []; // 历史记录数组
+
+        // --- 初始化加载 ---
+        document.addEventListener("DOMContentLoaded", () => {
+            loadApiKeys();
+            loadApiRoute();
+            loadHistory();
+            displayHistory();
+        });
 
         /**
-         * 显示消息提示
-         * @param {string} msg 消息内容
-         * @param {string} type 消息类型 ('success' 或 'error')
+         * 加载本地缓存的 API 密钥和线路
          */
-        function showMessage(msg, type) {
-            messageBox.textContent = msg;
-            messageBox.className = `message ${type}`;
-            messageBox.style.display = 'block';
-            setTimeout(() => {
-                messageBox.style.display = 'none';
-                messageBox.textContent = ''; // 清空内容
-            }, 5000); // 5秒后自动隐藏
+        function loadApiKeys() {
+            idInput.value = localStorage.getItem(LOCAL_STORAGE_ID_KEY) || defaultId;
+            keyInput.value = localStorage.getItem(LOCAL_STORAGE_KEY_KEY) || defaultKey;
+        }
+
+        function loadApiRoute() {
+            apiRouteSelect.value = localStorage.getItem(LOCAL_STORAGE_ROUTE_KEY) || "0";
         }
 
         /**
-         * 从分享文本中提取抖音视频URL
-         * 针对常见的抖音分享链接格式进行匹配
-         * @param {string} shareText 抖音分享文本
-         * @returns {string|null} 提取到的抖音URL（如：https://v.douyin.com/xxxxxxxx/）或 null
+         * 保存 API 密钥和线路到本地缓存
          */
-        function extractDouyinUrl(shareText) {
-            // 匹配以 https://v.douyin.com/ 开头，后面跟着字母、数字、_、-、.、/、% 的链接
-            const regex = /(https:\/\/v\.douyin\.com\/[a-zA-Z0-9_\-\.\/%]+\/?)/;
-            const match = shareText.match(regex);
-            return match ? match[0] : null;
+        function saveApiKeys() {
+            localStorage.setItem(LOCAL_STORAGE_ID_KEY, idInput.value.trim());
+            localStorage.setItem(LOCAL_STORAGE_KEY_KEY, keyInput.value.trim());
+            localStorage.setItem(LOCAL_STORAGE_ROUTE_KEY, apiRouteSelect.value);
         }
 
         /**
-         * 从localStorage获取历史记录
-         * @returns {Array} 历史记录数组
+         * 加载历史记录
          */
-        function getHistory() {
+        function loadHistory() {
             try {
-                const historyString = localStorage.getItem(LOCAL_STORAGE_KEY);
-                return historyString ? JSON.parse(historyString) : [];
+                history = JSON.parse(localStorage.getItem(LOCAL_STORAGE_HISTORY_KEY) || "[]");
             } catch (e) {
-                console.error("无法从localStorage获取历史记录:", e);
-                showMessage("加载历史记录失败。", "error");
-                return [];
+                console.error("解析历史记录失败", e);
+                history = [];
             }
         }
 
         /**
-         * 将历史记录保存到localStorage
-         * @param {Array} history 历史记录数组
+         * 保存历史记录
          */
-        function saveHistory(history) {
-            try {
-                localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(history));
-            } catch (e) {
-                console.error("无法保存历史记录到localStorage:", e);
-                showMessage("历史记录保存失败。", "error");
-            }
+        function saveHistory() {
+            localStorage.setItem(LOCAL_STORAGE_HISTORY_KEY, JSON.stringify(history));
         }
 
         /**
-         * 添加一个视频解析结果到历史记录
-         * @param {object} item 包含原始分享链接(shareLink)和视频数据(videoData)的对象
-         */
-        function addHistoryItem(item) {
-            const history = getHistory();
-            // 检查是否已存在相同分享链接的记录，避免重复添加
-            const exists = history.some(h => h.shareLink === item.shareLink);
-            if (!exists) {
-                history.unshift(item); // 将新记录添加到数组开头
-                saveHistory(history);
-            }
-        }
-
-        /**
-         * 根据索引移除历史记录项
-         * @param {number} index 要移除的项的索引
-         */
-        function removeHistoryItem(index) {
-            const history = getHistory();
-            if (index > -1 && index < history.length) {
-                history.splice(index, 1); // 移除对应索引的项
-                saveHistory(history);
-                renderHistory(); // 重新渲染历史记录列表
-                showMessage("历史记录已删除。", "success");
-            }
-        }
-
-        /**
-         * 更新主显示区的内容（视频播放器、标题、作者、下载按钮）
-         * @param {object|null} data 视频数据对象，如果为null则清空显示
-         */
-        function updateMainDisplay(data) {
-            if (!data) {
-                // 清空并隐藏视频相关元素，显示占位符
-                videoTitle.textContent = '';
-                videoAuthor.textContent = '';
-                videoPlayer.src = '';
-                videoPlayer.style.display = 'none';
-                downloadButton.classList.remove('visible');
-                downloadButton.removeAttribute('href');
-                downloadButton.removeAttribute('download');
-                mainDisplayPlaceholder.style.display = 'flex'; // 显示占位符
-                return;
-            }
-
-            // 更新视频信息
-            videoTitle.textContent = data.desc || '无标题';
-            videoAuthor.textContent = `作者：${data.nickname || '未知'}`;
-            videoPlayer.src = data.video_url_HQ;
-            videoPlayer.style.display = 'block'; // 显示视频播放器
-            videoPlayer.load(); // 加载新的视频源
-            videoPlayer.play().catch(e => {
-                // 捕获自动播放可能被浏览器阻止的错误
-                console.warn("视频自动播放受阻:", e);
-                showMessage("视频已加载，但自动播放可能被浏览器阻止。请手动点击播放。", "error");
-            });
-
-            // 设置下载按钮的链接和文件名
-            downloadButton.href = data.video_url_HQ;
-            
-            // 构造下载文件名，清理非法字符，避免文件名错误
-            const sanitizedTitle = (data.desc || '未命名视频').replace(/[\\/:*?"<>|]/g, '_').substring(0, 100); // 限制文件名长度
-            const sanitizedAuthor = (data.nickname || '未知作者').replace(/[\\/:*?"<>|]/g, '_').substring(0, 50);
-            downloadButton.download = `${sanitizedAuthor}_${sanitizedTitle}.mp4`;
-            downloadButton.classList.add('visible'); // 使下载按钮可见
-            mainDisplayPlaceholder.style.display = 'none'; // 隐藏占位符
-        }
-
-        /**
-         * 将文本复制到剪贴板
+         * 复制文本到剪贴板
          * @param {string} text 要复制的文本
          */
         function copyToClipboard(text) {
             navigator.clipboard.writeText(text)
-                .then(() => showMessage('已复制到剪贴板', 'success'))
-                .catch(err => showMessage('复制失败: ' + err, 'error'));
+                .then(() => {
+                    showAlert("已复制到剪贴板！", "success");
+                })
+                .catch(err => {
+                    console.error('复制失败: ', err);
+                    showAlert("复制失败，请手动复制！", "error");
+                });
+        }
+
+        /**
+         * 显示/隐藏标题的完整内容
+         */
+        function toggleTitleExpansion() {
+            const titleSpan = document.getElementById('video-title');
+            const expandButton = document.getElementById('expand-button');
+
+            if (titleSpan && expandButton) {
+                if (titleSpan.classList.contains('expanded')) {
+                    titleSpan.classList.remove('expanded');
+                    expandButton.textContent = '展开';
+                } else {
+                    titleSpan.classList.add('expanded');
+                    expandButton.textContent = '收起';
+                }
+            }
+        }
+
+        /**
+         * 从剪贴板粘贴 URL 到输入框
+         */
+        function pasteUrl() {
+            navigator.clipboard.readText().then(text => {
+                douyinUrlInput.value = text;
+                showAlert("已从剪贴板粘贴链接或分享文本！", "success");
+            }).catch(err => {
+                console.error('无法读取剪贴板内容: ', err);
+                showAlert("无法读取剪贴板内容，请手动粘贴！", "error");
+            });
+        }
+
+        /**
+         * 显示一个 Toast 风格的警告/成功消息
+         * @param {string} message 消息内容
+         * @param {'success'|'error'} type 消息类型
+         */
+        function showAlert(message, type) {
+            const alertDiv = document.createElement('div');
+            alertDiv.className = `fixed top-4 right-4 px-4 py-3 rounded-lg shadow-lg z-50 fade-in ${type === 'error' ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}`;
+            alertDiv.innerHTML = `
+                <div class="flex items-center">
+                    <i class="fas ${type === 'error' ? 'fa-exclamation-circle' : 'fa-check-circle'} mr-2"></i>
+                    <span>${message}</span>
+                </div>
+            `;
+            document.body.appendChild(alertDiv);
+
+            setTimeout(() => {
+                alertDiv.classList.remove('fade-in');
+                alertDiv.classList.add('opacity-0', 'transition-all', 'duration-300'); // Add duration for smooth fade out
+                setTimeout(() => alertDiv.remove(), 300);
+            }, 3000);
+        }
+
+        /**
+         * 提取抖音分享文本中的 URL
+         * @param {string} text 完整的分享文本
+         * @returns {string|null} 提取到的 URL 或 null
+         */
+        function extractDouyinUrl(text) {
+            // 匹配抖音短链 v.douyin.com，并包含后面的路径，直到空格或行尾
+            const regex = /(https:\/\/v\.douyin\.com\/[a-zA-Z0-9_-]+\/?)/;
+            const match = text.match(regex);
+            
+            if (match && match[1]) {
+                let url = match[1];
+                 // 确保链接以'/'结尾, 兼容一些API可能要求
+                if (!url.endsWith('/')) {
+                    url += '/';
+                }
+                return url;
+            }
+            return null;
+        }
+
+
+        /**
+         * 主函数：获取数据
+         */
+        async function fetchData() {
+            const id = idInput.value.trim();
+            const key = keyInput.value.trim();
+            const rawDouyinShareLink = douyinUrlInput.value.trim();
+
+            if (!id || !key) {
+                showAlert("请输入完整的 API ID 和 API Key!", "error");
+                return;
+            }
+            if (!rawDouyinShareLink) {
+                showAlert("请输入抖音分享文本或链接!", "error");
+                return;
+            }
+
+            saveApiKeys(); // 每次点击都保存 API Keys 和线路
+
+            const douyinUrl = extractDouyinUrl(rawDouyinShareLink);
+            if (!douyinUrl) {
+                showAlert("无法从输入中提取有效的抖音链接，请检查格式！", "error");
+                return;
+            }
+
+            // 显示加载状态
+            const originalButtonContent = fetchBtn.innerHTML;
+            fetchBtn.innerHTML = '';
+            fetchBtn.classList.add('button-loading');
+            fetchBtn.disabled = true;
+
+            infoContainer.innerHTML = `
+                <div class="flex flex-col items-center justify-center text-gray-400 fade-in">
+                    <i class="fas fa-spinner fa-spin text-4xl mb-2"></i>
+                    <p>正在努力获取信息中...</p>
+                </div>
+            `;
+            contentContainer.innerHTML = `
+                <div class="flex flex-col items-center justify-center text-gray-400 fade-in">
+                    <i class="fas fa-spinner fa-spin text-4xl mb-2"></i>
+                    <p>视频或图片预览加载中...</p>
+                </div>
+            `;
+
+
+            try {
+                const data = await tryFetchDataRecursive(0, id, key, douyinUrl);
+
+                if (data && data.code === 200) {
+                    displayData(data);
+                    addToHistory(rawDouyinShareLink, data);
+                    showAlert("视频信息获取成功！", "success");
+                } else if (data && data.code !== 200) {
+                    displayEmptyContainers(`API 错误: ${data.msg || '未知错误'}`);
+                    showAlert(`获取失败: ${data.msg || '未知错误'}`, "error");
+                } else {
+                    displayEmptyContainers("所有线路尝试失败，请检查网络或稍后重试。");
+                    showAlert("所有线路尝试失败，请检查网络或稍后重试。", "error");
+                }
+            } catch (error) {
+                console.error("整体获取数据失败:", error);
+                displayEmptyContainers(`请求失败: ${error.message}`);
+                showAlert(`请求失败: ${error.message}`, "error");
+            } finally {
+                // 恢复按钮状态
+                fetchBtn.innerHTML = originalButtonContent;
+                fetchBtn.classList.remove('button-loading');
+                fetchBtn.disabled = false;
+            }
+        }
+
+        /**
+         * 递归尝试所有 API 线路
+         * @param {number} routeIndex 当前尝试的线路索引
+         * @param {string} id API ID
+         * @param {string} key API Key
+         * @param {string} douyinUrl 提取出的抖音视频 URL
+         * @returns {Promise<object|null>} 成功则返回数据，失败则返回 null
+         */
+        async function tryFetchDataRecursive(routeIndex, id, key, douyinUrl) {
+            if (routeIndex >= apiRoutes.length) {
+                return null; // 所有线路都已尝试，但都失败了
+            }
+
+            const apiUrl = `${apiRoutes[routeIndex]}?id=${encodeURIComponent(id)}&key=${encodeURIComponent(key)}&url=${encodeURIComponent(douyinUrl)}`;
+            // console.log(`尝试线路 ${routeIndex + 1}: ${apiRoutes[routeIndex]}`);
+
+            try {
+                const response = await fetch(apiUrl);
+                if (!response.ok) {
+                    throw new Error(`HTTP error! Status: ${response.status}`);
+                }
+                const data = await response.json();
+                if (data.code === 200) {
+                    return data; // 成功获取数据
+                } else {
+                    // API 返回错误码，但连接成功。尝试下一条。
+                    console.warn(`线路 ${routeIndex + 1} 返回错误: ${data.msg || '未知错误'}, 尝试下一线路.`);
+                    return await tryFetchDataRecursive(routeIndex + 1, id, key, douyinUrl);
+                }
+            } catch (error) {
+                console.error(`线路 ${routeIndex + 1} 请求失败:`, error);
+                // 当前线路请求失败，尝试下一条
+                return await tryFetchDataRecursive(routeIndex + 1, id, key, douyinUrl);
+            }
+        }
+
+
+        /**
+         * 清空并显示默认状态的容器
+         * @param {string} message 可选的错误或提示消息
+         */
+        function displayEmptyContainers(message = "") {
+            infoContainer.innerHTML = `
+                <div class="flex flex-col items-center justify-center text-gray-400 fade-in">
+                    ${message ? `<p class="text-red-500 font-bold mb-2">${message}</p>` : ''}
+                    <i class="fas fa-info-circle text-4xl mb-2"></i>
+                    <p>请输入抖音链接并点击"获取信息"</p>
+                </div>
+            `;
+            contentContainer.innerHTML = `
+                <div class="flex flex-col items-center justify-center text-gray-400 fade-in">
+                    <i class="fas fa-photo-video text-4xl mb-2"></i>
+                    <p>视频或图片预览将显示在这里</p>
+                </div>
+            `;
+        }
+
+        /**
+         * 在指定容器中显示处理后的数据
+         * @param {object} data
+         */
+        function displayData(data) {
+            // 清空容器
+            infoContainer.innerHTML = "";
+            contentContainer.innerHTML = "";
+
+            // --- 渲染 Info Container ---
+            const infoDiv = document.createElement('div');
+            infoDiv.className = 'w-full fade-in'; // Tailwind class for full width
+
+            infoDiv.innerHTML = `
+                <div class="flex flex-col gap-6">
+                    ${data.cover ? `
+                        <div class="flex items-center justify-center">
+                            <img src="${data.cover}" alt="封面" class="w-full max-w-sm h-auto rounded-lg shadow-md border border-gray-100">
+                        </div>` : ''}
+                    <div>
+                        <h3 class="text-xl font-semibold text-gray-800 mb-2 flex items-center">
+                            <i class="fas fa-user-circle text-blue-500 mr-2"></i> ${data.name || '未知作者'}
+                        </h3>
+                        <p class="text-gray-700 mb-2">
+                            <i class="fas fa-heading text-purple-500 mr-2"></i> 标题:
+                            <span id="video-title" class="title-clamp">${data.title || '无标题'}</span>
+                            <span id="expand-button" class="expand-button" onclick="toggleTitleExpansion()">展开</span>
+                        </p>
+                        ${data.signature ? `
+                            <p class="text-gray-600 text-sm flex items-center">
+                                <i class="fas fa-pen-nib text-green-500 mr-2"></i> 签名: ${data.signature}
+                            </p>
+                        ` : ''}
+                    </div>
+            `;
+
+            // 音乐信息
+            if (data.musictitle || (data.musiccover && data.musiccover.length > 0)) {
+                infoDiv.innerHTML += `
+                    <div class="border-t border-gray-100 pt-4 mt-4">
+                        <h4 class="text-lg font-semibold text-gray-800 mb-2 flex items-center">
+                            <i class="fas fa-music text-pink-500 mr-2"></i> 音乐信息
+                        </h4>
+                        ${data.musictitle ? `<p class="text-gray-700 mb-1">标题: ${data.musictitle}</p>` : ''}
+                        ${data.musicauthor ? `<p class="text-gray-600 text-sm mb-1">作者: ${data.musicauthor}</p>` : ''}
+                        ${data.musiccover && data.musiccover.length > 0 ? `
+                        <div class="mt-2 flex items-center justify-center">
+                            <img src="${data.musiccover[0]}" alt="音乐封面" class="w-24 h-24 object-cover rounded-lg shadow-sm border border-gray-100">
+                        </div>` : ''}
+                    </div>
+                `;
+            }
+
+            // --- 渲染 Content Container ---
+            const contentDiv = document.createElement('div');
+            contentDiv.className = 'w-full fade-in';
+
+            if (data.type === "视频") {
+                // Info Container 添加视频相关操作按钮
+                infoDiv.innerHTML += `
+                    <div class="mt-4 flex flex-col sm:flex-row gap-3 border-t border-gray-100 pt-4">
+                        <button onclick="copyToClipboard('${data.yvideo}')"
+                            class="flex-1 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg text-sm flex items-center justify-center transition-all">
+                            <i class="fas fa-copy mr-2"></i> 复制视频链接
+                        </button>
+                        <button onclick="downloadResource('${data.video}', '${data.name || '未知作者'}_${data.title || '无标题'}.mp4')"
+                            class="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm inline-flex items-center justify-center transition-all">
+                            <i class="fas fa-download mr-2"></i> 下载高清视频
+                        </button>
+                    </div>
+                `;
+
+                // Content Container 显示视频播放器
+                contentDiv.innerHTML = `
+                    <h3 class="text-xl font-semibold text-gray-800 mb-4 flex items-center">
+                        <i class="fas fa-play-circle text-red-500 mr-2"></i> 视频预览
+                    </h3>
+                    <div class="video-player-container">
+                        <video id="video-player" controls poster="${data.cover}" src="${data.yvideo}" type="video/mp4">
+                            您的浏览器不支持 HTML5 视频。
+                        </video>
+                    </div>
+                `;
+            } else if (data.type === "图集") {
+                // Info Container 添加图集相关操作
+                infoDiv.innerHTML += `
+                    <div class="mt-4 flex flex-row gap-3 border-t border-gray-100 pt-4">
+                        <button onclick="copyToClipboard('${data.images[0] || data.cover}')"
+                            class="flex-1 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg text-sm flex items-center justify-center transition-all">
+                            <i class="fas fa-copy mr-2"></i> 复制首图链接
+                        </button>
+                    </div>
+                `;
+
+                // Content Container 显示图集图片
+                contentDiv.innerHTML = `
+                    <h3 class="text-xl font-semibold text-gray-800 mb-4 flex items-center">
+                        <i class="fas fa-images text-green-500 mr-2"></i> 图片预览 (${data.images.length}张)
+                    </h3>
+                    <div class="flex flex-col sm:flex-row items-center gap-3 mb-4 bg-gray-50 p-3 rounded-lg">
+                        <input type="text" id="filename-input" placeholder="输入下载文件名 (例如: 抖音图片)" value="${data.title || '抖音图片'}"
+                            class="flex-1 w-full sm:w-auto px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm">
+                        <button id="download-all-images-btn"
+                            class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg inline-flex items-center justify-center transition-all text-sm whitespace-nowrap">
+                            <i class="fas fa-download mr-2"></i> 一键下载所有图片
+                        </button>
+                    </div>
+                    <div id="image-grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                        ${data.images.map((imgUrl, index) => `
+                            <div class="image-container relative group rounded-lg overflow-hidden transition-all">
+                                <img src="${imgUrl}" alt="图片 ${index + 1}" class="w-full h-auto object-cover transition-all">
+                                <div class="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-all"></div>
+                                <a class="download-icon absolute top-2 right-2 bg-black bg-opacity-70 text-white p-2 rounded-full opacity-0 group-hover:opacity-100 transition-all z-10"
+                                   href="#" data-url="${imgUrl}" data-index="${index}">
+                                    <i class="fas fa-download text-sm"></i>
+                                </a>
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+                // Add event listener for "一键下载所有图片" button
+                setTimeout(() => { // Use setTimeout to ensure button is rendered
+                    const downloadAllImagesBtn = document.getElementById('download-all-images-btn');
+                    if (downloadAllImagesBtn) {
+                        downloadAllImagesBtn.addEventListener('click', () => {
+                            const filename = document.getElementById('filename-input').value.trim() || '抖音图片';
+                            downloadAllImages(data.images, filename);
+                        });
+                    }
+                    // Add event listener for individual image downloads using delegation
+                    const imageGrid = document.getElementById('image-grid');
+                    if (imageGrid) {
+                        imageGrid.addEventListener('click', (event) => {
+                            const downloadLink = event.target.closest('.download-icon');
+                            if (downloadLink) {
+                                event.preventDefault();
+                                const imageUrl = downloadLink.dataset.url;
+                                const index = parseInt(downloadLink.dataset.index) + 1; // 1-based index
+                                const baseFilename = document.getElementById('filename-input').value.trim() || '抖音图片';
+                                const filename = `${baseFilename}_${index}.jpg`;
+                                downloadResource(imageUrl, filename);
+                            }
+                        });
+                    }
+                }, 0); // Small delay to ensure DOM is updated
+            } else {
+                 infoDiv.innerHTML += `
+                    <div class="mt-4 border-t border-gray-100 pt-4 text-center">
+                        <p class="text-red-500 font-bold">未知类型内容</p>
+                    </div>
+                `;
+                contentDiv.innerHTML = `
+                    <div class="flex flex-col items-center justify-center text-gray-400 fade-in">
+                        <i class="fas fa-question-circle text-4xl mb-2"></i>
+                        <p>该内容类型无法预览或处理。</p>
+                        <p class="text-sm">类型: ${data.type || '未知'}</p>
+                    </div>
+                `;
+            }
+
+            infoContainer.appendChild(infoDiv);
+            contentContainer.appendChild(contentDiv);
+            infoContainer.scrollTop = 0; // Scroll to top of info
+            contentContainer.scrollTop = 0; // Scroll to top of content
+        }
+
+        /**
+         * 下载文件（视频或图片）
+         * @param {string} url 资源URL
+         * @param {string} filename 下载的文件名
+         */
+        function downloadResource(url, filename) {
+            // console.log(`Attempting to download: ${url} as ${filename}`);
+            showAlert(`开始下载: ${filename}`, "success");
+            fetch(url, {
+                mode: 'cors', // 确保跨域请求凭证策略
+                redirect: 'follow'
+            })
+            .then(response => {
+                if (!response.ok) {
+                    if (response.status === 403) {
+                         throw new Error(`下载失败 (403 Forbidden). 视频源可能受到防盗链限制，请尝试在浏览器中直接访问链接或使用专业的下载工具。`);
+                    }
+                    throw new Error(`网络响应不佳: ${response.status}`);
+                }
+                return response.blob();
+            })
+            .then(blob => {
+                const a = document.createElement('a');
+                a.href = URL.createObjectURL(blob);
+                a.download = filename;
+                a.style.display = 'none';
+                document.body.appendChild(a);
+                a.click();
+                URL.revokeObjectURL(a.href);
+                document.body.removeChild(a);
+                // showAlert("下载已开始！", "success"); // Already shown at the start of function
+            })
+            .catch(error => {
+                console.error('下载出错:', error);
+                showAlert(`下载失败！${error.message}`, "error");
+            });
+        }
+
+        /**
+         * 下载所有图片
+         * @param {Array<string>} imageUrls 图片URL数组
+         * @param {string} baseFilename 基础文件名
+         */
+        function downloadAllImages(imageUrls, baseFilename) {
+            showAlert(`开始下载 ${imageUrls.length} 张图片...`, "success");
+            if (!imageUrls || imageUrls.length === 0) {
+                showAlert("没有图片可以下载。", "error");
+                return;
+            }
+            // 使用 Promise.allSettled 来等待所有下载尝试完成，并显示最终结果
+            const downloadPromises = imageUrls.map((imageUrl, index) => {
+                return new Promise(resolve => {
+                    setTimeout(() => { // stagger downloads
+                        const filename = `${baseFilename}_${index + 1}.jpg`;
+                        downloadResource(imageUrl, filename);
+                        resolve(); // Resolve immediately after initiating download, as alerts handle success/failure
+                    }, index * 300); // 300ms delay between each download
+                });
+            });
+
+            // 可以选择在这里等待所有 Promise 完成，然后显示汇总消息
+            Promise.allSettled(downloadPromises).then(() => {
+                // showAlert("所有图片下载任务已发送！请检查下载列表。", "success");
+            });
+        }
+
+
+        /**
+         * 将解析结果添加到历史记录
+         * @param {string} rawShareLink 原始分享链接
+         * @param {object} apiResponse API响应数据
+         */
+        function addToHistory(rawShareLink, apiResponse) {
+            const newRecord = {
+                rawShareLink: rawShareLink,
+                data: apiResponse,
+                timestamp: Date.now()
+            };
+
+            // 检查是否已存在相同的分享链接，若有则移除旧记录
+            history = history.filter(item => item.rawShareLink !== rawShareLink);
+
+            history.unshift(newRecord); // 添加到数组开头
+
+            // 限制历史记录数量，例如最多20条
+            if (history.length > 20) {
+                history = history.slice(0, 20);
+            }
+
+            saveHistory();
+            displayHistory();
         }
 
         /**
          * 渲染历史记录列表
-         * 从 localStorage 获取数据并动态创建卡片
          */
-        function renderHistory() {
-            const history = getHistory();
-            historyList.innerHTML = ''; // 清空现有内容
+        function displayHistory() {
+            historyList.innerHTML = ""; // 清空现有列表
 
             if (history.length === 0) {
-                emptyHistoryMsg.style.display = 'block'; // 显示“暂无历史记录”消息
+                historyList.innerHTML = `
+                    <li class="py-3 text-center text-gray-400">
+                        <i class="fas fa-clock mr-2"></i>暂无历史记录
+                    </li>
+                `;
                 return;
-            } else {
-                emptyHistoryMsg.style.display = 'none'; // 隐藏消息
             }
 
             history.forEach((item, index) => {
-                const card = document.createElement('div');
-                card.className = 'history-card';
-                card.dataset.index = index; // 将索引存储在数据集，方便操作
-
-                // 视频标题（点击后加载到主显示区）
-                const titleElem = document.createElement('h4');
-                titleElem.textContent = item.videoData.desc || '无标题';
-                titleElem.title = item.videoData.desc || '点击加载视频'; // 悬停显示完整标题
-                titleElem.addEventListener('click', () => {
-                    updateMainDisplay(item.videoData);
-                    shareLinkInput.value = item.shareLink; // 将原始分享链接填充回输入框
-                });
-                card.appendChild(titleElem);
-
-                // 作者信息
-                const authorElem = document.createElement('p');
-                authorElem.className = 'author';
-                authorElem.textContent = `作者: ${item.videoData.nickname || '未知'}`;
-                card.appendChild(authorElem);
-
-                // 原始分享链接 (点击复制)
-                const shareLinkDiv = document.createElement('div');
-                shareLinkDiv.className = 'url-link';
-                shareLinkDiv.title = '点击复制原始分享链接';
-
-                const shareLinkSpan = document.createElement('span');
-                shareLinkSpan.textContent = item.shareLink;
-                shareLinkDiv.appendChild(shareLinkSpan);
+                const listItem = document.createElement("li");
+                listItem.className = "py-3 flex items-center justify-between group fade-in";
                 
-                const shareLinkTooltip = document.createElement('span');
-                shareLinkTooltip.className = 'tooltip';
-                shareLinkTooltip.textContent = '点击复制链接';
-                shareLinkDiv.appendChild(shareLinkTooltip);
-                
-                shareLinkDiv.addEventListener('click', (e) => {
-                    e.stopPropagation(); // 阻止事件冒泡到卡片点击
-                    copyToClipboard(item.shareLink);
-                });
-                card.appendChild(shareLinkDiv);
+                const titleText = item.data.title && item.data.title.length > 20 ? item.data.title.substring(0, 18) + '...' : item.data.title;
 
-                // 高清视频地址 (点击复制)
-                const videoUrlHQDiv = document.createElement('div');
-                videoUrlHQDiv.className = 'video-url-hq-link';
-                videoUrlHQDiv.title = '点击复制高清视频地址';
-
-                const videoUrlHQSpan = document.createElement('span');
-                videoUrlHQSpan.textContent = item.videoData.video_url_HQ;
-                videoUrlHQDiv.appendChild(videoUrlHQSpan);
-
-                const videoUrlHQTooltip = document.createElement('span');
-                videoUrlHQTooltip.className = 'tooltip';
-                videoUrlHQTooltip.textContent = '点击复制视频地址';
-                videoUrlHQDiv.appendChild(videoUrlHQTooltip);
-
-                videoUrlHQDiv.addEventListener('click', (e) => {
-                    e.stopPropagation(); // 阻止事件冒泡到卡片点击
-                    copyToClipboard(item.videoData.video_url_HQ);
-                });
-                card.appendChild(videoUrlHQDiv);
-
-                // 删除按钮
-                const actionsDiv = document.createElement('div');
-                actionsDiv.className = 'actions';
-                const deleteBtn = document.createElement('button');
-                deleteBtn.className = 'delete-btn';
-                deleteBtn.textContent = '删除';
-                deleteBtn.addEventListener('click', (e) => {
-                    e.stopPropagation(); // 阻止事件冒泡到卡片点击
-                    if (confirm('确定要删除此历史记录吗？')) {
-                        removeHistoryItem(index);
-                    }
-                });
-                actionsDiv.appendChild(deleteBtn);
-                card.appendChild(actionsDiv);
-
-                historyList.appendChild(card);
+                listItem.innerHTML = `
+                    <a href="#" onclick="loadHistoryItem(${index})"
+                        class="text-blue-600 hover:text-blue-800 flex-1 truncate pr-2" title="${item.data.title}">
+                        <i class="fas fa-link mr-2 text-gray-400"></i>${titleText || item.rawShareLink.substring(0, 20) + '...'}
+                    </a>
+                    <button onclick="deleteHistoryItem(${index})"
+                        class="text-red-500 hover:text-red-700 transition-all">
+                        <i class="fas fa-trash-alt"></i>
+                    </button>
+                `;
+                historyList.appendChild(listItem);
             });
         }
 
-        // “Go - 解析视频”按钮点击事件监听
-        goButton.addEventListener('click', async () => {
-            const shareLink = shareLinkInput.value.trim();
-            if (!shareLink) {
-                showMessage('请输入抖音分享链接', 'error');
-                return;
+        /**
+         * 加载历史记录中的某个视频到当前显示区域
+         * @param {number} index 历史记录数组中的索引
+         */
+        function loadHistoryItem(index) {
+            const item = history[index];
+            if (item) {
+                douyinUrlInput.value = item.rawShareLink; // 将分享链接填回输入框
+                displayData(item.data);
+                showAlert("已从历史记录加载！", "success");
+                // 滚动到 Content Container 顶部
+                contentContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
             }
+        }
 
-            const douyinUrl = extractDouyinUrl(shareLink);
-            if (!douyinUrl) {
-                showMessage('未能从输入中提取到有效的抖音URL，请检查链接格式。', 'error');
-                return;
+        /**
+         * 删除历史记录中的某个视频
+         * @param {number} index 历史记录数组中的索引
+         */
+        function deleteHistoryItem(index) {
+            if (confirm('确定要删除这条历史记录吗？')) {
+                history.splice(index, 1);
+                saveHistory();
+                displayHistory();
+                displayEmptyContainers("历史记录已删除。"); // 清空当前显示并提示
+                douyinUrlInput.value = ''; // 清空输入框
+
+                showAlert("历史记录已删除！", "success");
             }
-
-            goButton.disabled = true; // 禁用按钮防止重复点击
-            goButton.textContent = '解析中...';
-            showMessage('正在解析视频...', 'success');
-            
-            try {
-                // 发送 GET 请求到 API 接口
-                const response = await fetch(`${API_BASE_URL}?url=${encodeURIComponent(douyinUrl)}`);
-                
-                // 检查 HTTP 响应状态
-                if (!response.ok) {
-                    throw new Error(`HTTP 错误! 状态码: ${response.status}`);
-                }
-                
-                const result = await response.json();
-
-                // 检查 API 返回的数据结构和状态码
-                if (result.code === 200 && result.data && result.data.video_url_HQ) {
-                    showMessage('视频解析成功！', 'success');
-                    updateMainDisplay(result.data); // 更新主显示区
-                    addHistoryItem({ shareLink: shareLink, videoData: result.data }); // 添加到历史记录
-                    renderHistory(); // 重新渲染历史记录列表
-                } else {
-                    const errorMsg = result.msg || '视频解析失败，请尝试其他链接。';
-                    showMessage(errorMsg, 'error');
-                    console.error('API 返回错误数据或状态:', result);
-                    updateMainDisplay(null); // 清空主显示区
-                }
-            } catch (error) {
-                console.error('解析抖音视频时发生错误:', error);
-                showMessage(`请求失败: ${error.message}，请检查网络连接或API服务。`, 'error');
-                updateMainDisplay(null); // 清空主显示区
-            } finally {
-                goButton.disabled = false; // 启用按钮
-                goButton.textContent = 'Go - 解析视频'; // 恢复按钮文本
-            }
-        });
-
-        // 页面加载完成时初始化
-        document.addEventListener('DOMContentLoaded', () => {
-            renderHistory(); // 渲染历史记录
-            updateMainDisplay(null); // 初始化主显示区为占位状态
-        });
+        }
 
     </script>
 </body>
