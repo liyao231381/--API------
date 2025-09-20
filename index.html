@@ -451,6 +451,11 @@
                                         class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm inline-flex items-center justify-center transition-all">
                                         <i class="fas fa-download"></i> 下载视频
                                     </button>
+                                    <a href="${data.video}" download="${data.name || '未知作者'}_${data.title || '无标题'}.mp4"
+                                        class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm inline-flex items-center justify-center transition-all"
+                                        target="_blank" rel="noopener noreferrer">
+                                        <i class="fas fa-download mr-2"></i> 下载视频⭐
+                                    </a>
                                 </div>
                         `;
 
